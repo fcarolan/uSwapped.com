@@ -3,15 +3,15 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeftRight, ArrowRight, Sparkles, Truck } from "lucide-react";
 import { apiGet } from "@/lib/api";
 import type { Item } from "@/lib/types";
-import ItemCard, { CreditBadge, ItemCardSkeleton } from "@/components/ItemCard";
-import CreditCalculator from "@/components/CreditCalculator";
-import { CtaBand, Faq, HowSteps, SectionLabel, TierTable } from "@/components/Sections";
+import ItemCard, { FeeBadge, ItemCardSkeleton } from "@/components/ItemCard";
+import FeeCalculator from "@/components/FeeCalculator";
+import { CtaBand, Faq, FeeTable, HowSteps, SectionLabel } from "@/components/Sections";
 import { CATEGORIES } from "@/lib/types";
-import { eur } from "@/lib/credits";
+import { eur, processingFeeCents } from "@/lib/fees";
 
 const HERO_FALLBACK = [
-  { title: "Vintage Camera", image_url: "https://images.unsplash.com/26/camera-keys.jpg?w=700&q=80", credit_cost: 8, value_eur: 140 },
-  { title: "Retro Typewriter", image_url: "https://images.unsplash.com/photo-1708102399096-b01391f99fbb?w=700&q=80", credit_cost: 4, value_eur: 85 },
+  { title: "Vintage Camera", image_url: "https://images.unsplash.com/26/camera-keys.jpg?w=700&q=80", value_eur: 140 },
+  { title: "Retro Typewriter", image_url: "https://images.unsplash.com/photo-1708102399096-b01391f99fbb?w=700&q=80", value_eur: 85 },
 ];
 
 export default function Landing() {
@@ -26,7 +26,7 @@ export default function Landing() {
         <div className="mx-auto grid max-w-7xl items-center gap-12 px-6 py-16 lg:grid-cols-[1.15fr_1fr] lg:py-24">
           <div className="animate-pop-in">
             <span className="inline-flex items-center gap-2 rounded-full border-2 border-slate-900 bg-white px-3 py-1 text-xs font-bold">
-              <Sparkles className="size-3.5 text-amber-500" /> 3 free credits when you join
+              <Sparkles className="size-3.5 text-amber-500" /> Free to list. Always.
             </span>
             <h1 className="mt-6 text-5xl font-extrabold leading-[1.02] tracking-tight text-slate-900 sm:text-6xl lg:text-7xl">
               Swap your stuff,
@@ -38,7 +38,7 @@ export default function Landing() {
             </h1>
             <p className="mt-6 max-w-lg text-lg leading-relaxed text-slate-700">
               USwapped is the friendly marketplace where nothing is sold — everything is swapped. List what you don't
-              need, find what you love, and seal the deal with a few Swap Credits.
+              need for free, find what you love, and confirm your swap with a small processing fee.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
@@ -57,7 +57,7 @@ export default function Landing() {
               </Link>
             </div>
             <p className="mt-6 inline-flex items-center gap-2 text-sm text-slate-600">
-              <Truck className="size-4" /> Each swapper posts their own item, at their own cost.
+              <Truck className="size-4" /> Senders pay their own postage. Tracked labels available in the app.
             </p>
           </div>
 
@@ -77,7 +77,7 @@ export default function Landing() {
                       <p className="truncate text-sm font-bold">{it.title}</p>
                       <p className="font-mono text-[11px] text-slate-500">est. {eur(it.value_eur)}</p>
                     </div>
-                    <CreditBadge credits={it.credit_cost} />
+                    <FeeBadge cents={processingFeeCents(it.value_eur)} />
                   </div>
                 </div>
               ))}
@@ -136,20 +136,21 @@ export default function Landing() {
       {/* CREDITS */}
       <section className="mx-auto grid max-w-7xl gap-10 px-6 pt-24 lg:grid-cols-[1fr_1.2fr]">
         <div>
-          <SectionLabel>Fair credit pricing</SectionLabel>
-          <h2 className="mt-2 text-4xl font-extrabold text-slate-900">Small swaps cost 1 credit. Big ones scale fairly.</h2>
+          <SectionLabel>Simple, fair pricing</SectionLabel>
+          <h2 className="mt-2 text-4xl font-extrabold text-slate-900">Free to list. 5% to complete a swap.</h2>
           <p className="mt-4 max-w-md text-slate-700">
-            Credits are based on the estimated value of the item you receive. Try it — then grab a pack from just €1.99.
+            Only the person requesting a swap pays, and only once the owner accepts. Small swaps cost €0.99, and big
+            swaps are capped at €19.99.
           </p>
           <div className="mt-6">
-            <CreditCalculator />
+            <FeeCalculator />
           </div>
-          <Link to="/credits" data-testid="landing-buy-credits" className="mt-6 inline-flex items-center gap-1 text-sm font-bold text-emerald-700 hover:underline">
-            See credit packs <ArrowRight className="size-4" />
+          <Link to="/pricing" data-testid="landing-pricing-link" className="mt-6 inline-flex items-center gap-1 text-sm font-bold text-emerald-700 hover:underline">
+            See pricing &amp; shipping labels <ArrowRight className="size-4" />
           </Link>
         </div>
         <div className="lg:pt-16">
-          <TierTable />
+          <FeeTable />
         </div>
       </section>
 

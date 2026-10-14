@@ -12,7 +12,6 @@ from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
 
 from lib.auth import now_iso
-from lib.credits import SIGNUP_BONUS
 from lib.db import db
 from models.schemas import AuthProviders
 
@@ -90,9 +89,7 @@ async def facebook_callback(request: Request):
     else:
         user_id = f"user_{uuid.uuid4().hex[:12]}"
         await db.users.insert_one({"user_id": user_id, "email": email, "name": name, "picture": picture,
-                                   "facebook_id": profile["id"], "credits": SIGNUP_BONUS, "created_at": now_iso()})
-        await db.credit_transactions.insert_one({"id": str(uuid.uuid4()), "user_id": user_id, "amount": SIGNUP_BONUS,
-                                                 "reason": "Welcome bonus", "created_at": now_iso()})
+                                   "facebook_id": profile["id"], "created_at": now_iso()})
 
     session_token = secrets.token_urlsafe(32)
     await db.user_sessions.insert_one({"user_id": user_id, "session_token": session_token,

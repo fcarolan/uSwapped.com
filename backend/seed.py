@@ -3,7 +3,6 @@ import asyncio
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from lib.credits import credits_for_value
 from lib.db import db, ensure_indexes
 
 U = "https://images.unsplash.com/"
@@ -55,7 +54,7 @@ async def main():
     now = datetime.now(timezone.utc)
     for u in DEMO_USERS + [TEST_USER]:
         if not await db.users.find_one({"user_id": u["user_id"]}):
-            await db.users.insert_one({**u, "credits": 50, "created_at": now.isoformat()})
+            await db.users.insert_one({**u, "created_at": now.isoformat()})
     all_items = [(s, DEMO_USERS[o], *rest) for s, o, *rest in ITEMS] + [(s, TEST_USER, *rest) for s, *rest in TEST_ITEMS]
     for i, (sid, owner, title, desc, cat, cond, value, img, loc) in enumerate(all_items):
         if await db.items.find_one({"id": sid}):
@@ -63,7 +62,7 @@ async def main():
         await db.items.insert_one({
             "id": sid, "owner_id": owner["user_id"], "owner_name": owner["name"], "owner_picture": owner["picture"],
             "title": title, "description": desc, "category": cat, "condition": cond, "value_eur": float(value),
-            "image_url": img, "location": loc, "credit_cost": credits_for_value(value), "status": "available",
+            "image_url": img, "location": loc, "status": "available",
             "created_at": (now - timedelta(hours=i)).isoformat(),
         })
     for i, (ratee, rater, stars, comment, title) in enumerate(DEMO_RATINGS):

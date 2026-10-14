@@ -1,6 +1,6 @@
 # USwapped.com — SPEC
 
-Peer-to-peer item swapping marketplace. No cash between users; swaps are confirmed with **Swap Credits** (sold via Stripe). Each swapper posts their own item at their own cost.
+Peer-to-peer item swapping marketplace. No cash between users; swaps are confirmed with **Swap Credits (REMOVED in v2, see bottom)** (sold via Stripe). Each swapper posts their own item at their own cost.
 
 ## Revenue model
 - Credits sold in packs (EUR, Stripe Checkout, claimable sandbox, tax mode "Stripe manages everything"): 10=€1.99, 20=€3.99, 50=€6.99, 100=€9.99.
@@ -63,3 +63,11 @@ Code is ready but DISABLED until FACEBOOK_APP_ID and FACEBOOK_APP_SECRET are set
 ## Saved searches
 - GET/POST/DELETE /saved-searches {q, category?, location} (max 10/user, no duplicates, at least one field). Browse has a location box + "Save search & get alerts"; Dashboard "Saved searches" tab.
 - Search matching (Browse + alerts) is word-based and plural-tolerant ("cameras" matches "Camera"); location is a case-insensitive contains. New listings trigger a `saved_search` notification (+ push) to each other user with a matching search.
+
+
+## BUSINESS MODEL v2 (replaces Swap Credits — credits fully removed)
+- Listing and offering are FREE. Only the person requesting a swap (proposer) pays a processing fee: 5% of the target item's estimated value, min €0.99, max €19.99 (backend lib/fees.py, mirrored in frontend lib/fees.ts). Item responses include computed `processing_fee_cents`; swaps store `fee_cents`.
+- Swap flow: pending → owner accepts → `awaiting_payment` (both items `reserved`, payment_due_at = +48h) → proposer pays via Stripe (POST /payments/swap-fee {swap_id, origin_url}) → `accepted` (= confirmed; items `swapped`, other offers on those items cancelled, both notified `swap_confirmed`, chat + postage tracker open, emails revealed). Unpaid after 48h → `expired` (lazy, items back to available). Proposer can cancel while pending/awaiting_payment.
+- Shipping labels (optional, sender pays): sizes small €5.00 / medium €8.00 / large €12.00 / xl €16.50 (base + €0.50 margin). POST /payments/label {swap_id, size, sender, recipient, origin_url} (confirmed swaps, one per side) → Stripe → label `paid`, tracking `DEMO-USW-XXXXXXXX` copied to swap {role}_tracking + {role}_label_id. GET /labels/{id}/pdf (owner only) = A6 PDF. **LABELS + TRACKING ARE MOCKED/DEMO** (lib/labels.py) until a carrier (Sendcloud/Shippo) is connected.
+- Payments: payment_transactions {session_id, user_id, kind swap_fee|label, swap_id, label_id, description, amount_cents, payment_status, fulfilled}. GET /payments/status/{session_id}, GET /payments/history, POST /stripe/webhook. Stripe products (setup_stripe.py): uswapped_processing_fee, uswapped_shipping_label, inline price_data. Old credit packs retired.
+- Pages: /pricing (fees + label prices; /credits aliases it). Dashboard tabs: Offers for me, My offers (Pay fee button + countdown), My listings, Saved searches, Payments.

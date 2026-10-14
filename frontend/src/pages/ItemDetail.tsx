@@ -2,19 +2,18 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowLeftRight, Coins, MapPin, Trash2, Truck } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, MapPin, Repeat, Trash2, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { apiDelete, apiGet, apiPost } from "@/lib/api";
 import type { Item, Swap, SwapCreate } from "@/lib/types";
 import { errorMessage, startGoogleLogin, useMe } from "@/lib/hooks";
-import { CreditBadge } from "@/components/ItemCard";
-import { eur } from "@/lib/credits";
+import { eur, euro } from "@/lib/fees";
 import { cn } from "@/lib/utils";
 import { RatingInline, TrustBadge, isTrusted } from "@/components/Trust";
 
-function ProposeDialog({ target, myCredits }: { target: Item; myCredits: number }) {
+function ProposeDialog({ target }: { target: Item }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -23,7 +22,6 @@ function ProposeDialog({ target, myCredits }: { target: Item; myCredits: number 
   const { data: mine, isPending } = useQuery({ queryKey: ["items", "mine"], queryFn: () => apiGet<Item[]>("/items/mine"), enabled: open });
   const available = (mine ?? []).filter((i) => i.status === "available");
   const offered = available.find((i) => i.id === offeredId);
-  const enough = myCredits >= target.credit_cost;
 
   const propose = useMutation({
     mutationFn: (body: SwapCreate) => apiPost<Swap>("/swaps", body),
@@ -52,7 +50,7 @@ function ProposeDialog({ target, myCredits }: { target: Item; myCredits: number 
         <DialogHeader>
           <DialogTitle className="font-heading text-2xl font-extrabold">Offer one of your items</DialogTitle>
           <DialogDescription>
-            for <strong>{target.title}</strong>. Credits are only spent if {target.owner_name.split(" ")[0]} accepts.
+            for <strong>{target.title}</strong>. Offers are free. You only pay the processing fee if {target.owner_name.split(" ")[0]} accepts.
           </DialogDescription>
         </DialogHeader>
         {isPending ? (
@@ -82,7 +80,6 @@ function ProposeDialog({ target, myCredits }: { target: Item; myCredits: number 
                   <p className="truncate font-semibold">{i.title}</p>
                   <p className="font-mono text-xs text-slate-500">est. {eur(i.value_eur)}</p>
                 </div>
-                <CreditBadge credits={i.credit_cost} />
               </button>
             ))}
           </div>
@@ -90,15 +87,15 @@ function ProposeDialog({ target, myCredits }: { target: Item; myCredits: number 
         {offered && (
           <div className="grid grid-cols-2 gap-3 rounded-xl bg-amber-50 p-4 text-sm" data-testid="propose-cost-breakdown">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">You pay</p>
-              <p className="font-heading text-2xl font-extrabold" data-testid="propose-you-pay">{target.credit_cost} cr</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Fee if accepted</p>
+              <p className="font-heading text-2xl font-extrabold" data-testid="propose-you-pay">{euro(target.processing_fee_cents)}</p>
             </div>
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-slate-500">They pay</p>
-              <p className="font-heading text-2xl font-extrabold">{offered.credit_cost} cr</p>
+              <p className="font-heading text-2xl font-extrabold">€0.00</p>
             </div>
             <p className="col-span-2 flex items-start gap-2 text-xs text-slate-600">
-              <Truck className="size-4 shrink-0" /> You'll each post your own item at your own cost.
+              <Truck className="size-4 shrink-0" /> You'll each post your own item at your own cost. Tracked labels are optional.
             </p>
           </div>
         )}
@@ -111,15 +108,9 @@ function ProposeDialog({ target, myCredits }: { target: Item; myCredits: number 
             maxLength={500}
           />
         )}
-        {!enough && (
-          <p className="text-sm font-semibold text-red-700" data-testid="propose-not-enough-credits">
-            You have {myCredits} credits but need {target.credit_cost}.{" "}
-            <Link to="/credits" className="underline">Top up</Link>
-          </p>
-        )}
         <Button
           data-testid="propose-submit-button"
-          disabled={!offered || !enough || propose.isPending}
+          disabled={!offered || propose.isPending}
           onClick={() => propose.mutate({ target_item_id: target.id, offered_item_id: offeredId, message })}
           className="h-12 rounded-full font-bold"
         >
@@ -214,10 +205,11 @@ export default function ItemDetail() {
                 <p className="mt-1 font-heading text-3xl font-extrabold" data-testid="item-value">{eur(item.value_eur)}</p>
               </div>
               <div className="p-5">
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Swap cost</p>
-                <p className="mt-1 inline-flex items-center gap-1 font-heading text-3xl font-extrabold" data-testid="item-credit-cost">
-                  <Coins className="size-6 text-amber-600" /> {item.credit_cost}
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Swap fee</p>
+                <p className="mt-1 inline-flex items-center gap-1 font-heading text-3xl font-extrabold" data-testid="item-swap-fee">
+                  <Repeat className="size-6 text-amber-600" /> {euro(item.processing_fee_cents)}
                 </p>
+                <p className="text-[11px] text-slate-500">only if your offer is accepted</p>
               </div>
             </div>
 
@@ -262,7 +254,7 @@ export default function ItemDetail() {
                   </Button>
                 </div>
               ) : (
-                <ProposeDialog target={item} myCredits={me.credits} />
+                <ProposeDialog target={item} />
               ))}
             <p className="flex items-start gap-2 text-xs text-slate-500">
               <Truck className="size-4 shrink-0" /> Postage &amp; packaging is paid by each sender when swapping.

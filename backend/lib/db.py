@@ -41,8 +41,9 @@ INDEXES: dict[str, list[IndexModel]] = {
     "ratings": [IndexModel([("ratee_id", ASCENDING), ("created_at", DESCENDING)], name="ratee_created")],
     "saved_searches": [IndexModel([("user_id", ASCENDING), ("created_at", DESCENDING)], name="user_created")],
     "images": [IndexModel([("id", ASCENDING)], name="id", unique=True)],
-    "credit_transactions": [IndexModel([("user_id", ASCENDING), ("created_at", DESCENDING)], name="user_created")],
-    "payment_transactions": [IndexModel([("session_id", ASCENDING)], name="session_id", unique=True)],
+    "shipping_labels": [IndexModel([("id", ASCENDING)], name="id", unique=True)],
+    "payment_transactions": [IndexModel([("session_id", ASCENDING)], name="session_id", unique=True),
+                             IndexModel([("user_id", ASCENDING), ("created_at", DESCENDING)], name="user_created")],
 }
 
 

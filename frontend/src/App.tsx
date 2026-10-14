@@ -7,7 +7,7 @@ import Browse from "@/pages/Browse";
 import ItemDetail from "@/pages/ItemDetail";
 import CreateListing from "@/pages/CreateListing";
 import Dashboard from "@/pages/Dashboard";
-import Credits from "@/pages/Credits";
+import Pricing from "@/pages/Pricing";
 import HowItWorks from "@/pages/HowItWorks";
 import Login from "@/pages/Login";
 import PaymentSuccess from "@/pages/PaymentSuccess";
@@ -26,7 +26,8 @@ export default function App() {
         <Route path="/browse" element={<Browse />} />
         <Route path="/items/:id" element={<ItemDetail />} />
         <Route path="/how-it-works" element={<HowItWorks />} />
-        <Route path="/credits" element={<Credits />} />
+        <Route path="/pricing" element={<Pricing />} />
+        <Route path="/credits" element={<Pricing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/list" element={<RequireAuth><CreateListing /></RequireAuth>} />
         <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />

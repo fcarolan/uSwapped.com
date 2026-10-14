@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
-import { ArrowLeftRight, Coins, LayoutDashboard, LogOut, Plus, Menu } from "lucide-react";
+import { ArrowLeftRight, LayoutDashboard, LogOut, Plus, Menu } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -31,7 +31,7 @@ export function Logo({ className }: { className?: string }) {
 const NAV = [
   { to: "/browse", label: "Browse", testid: "nav-browse" },
   { to: "/how-it-works", label: "How it works", testid: "nav-how" },
-  { to: "/credits", label: "Swap Credits", testid: "nav-credits" },
+  { to: "/pricing", label: "Pricing", testid: "nav-pricing" },
 ];
 
 function NavItems({ onClick }: { onClick?: () => void }) {
@@ -69,13 +69,6 @@ function Header() {
         <div className="ml-auto flex items-center gap-2">
           {me ? (
             <>
-              <Link
-                to="/credits"
-                data-testid="header-credit-balance"
-                className="brutal brutal-hover hidden items-center gap-1.5 rounded-full bg-amber-200 px-3 py-1 text-sm font-bold text-slate-900 sm:flex"
-              >
-                <Coins className="size-4" /> {me.credits} credits
-              </Link>
               <Link
                 to="/list"
                 data-testid="header-list-item-button"
@@ -164,9 +157,9 @@ function Footer() {
           <Link to="/how-it-works" className="hover:text-white">How it works</Link>
         </div>
         <div className="flex flex-col gap-2 text-sm">
-          <p className="font-heading text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Credits</p>
-          <Link to="/credits" className="hover:text-white">Buy Swap Credits</Link>
-          <Link to="/dashboard" className="hover:text-white">My wallet</Link>
+          <p className="font-heading text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Pricing</p>
+          <Link to="/pricing" className="hover:text-white">Fees &amp; shipping labels</Link>
+          <Link to="/dashboard?tab=payments" className="hover:text-white">My payments</Link>
         </div>
       </div>
       <p className="border-t border-slate-800 py-5 text-center text-xs text-slate-500">

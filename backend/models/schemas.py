@@ -1,14 +1,17 @@
 """Pydantic models — mirrored by hand in frontend/src/lib/types.ts. Keep both in sync."""
 from typing import List, Literal, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
+
+from lib.fees import processing_fee_cents
 
 Category = Literal[
     "Electronics", "Fashion", "Books", "Music & Vinyl", "Home & Garden",
     "Toys & Games", "Sports & Outdoors", "Collectibles", "Other",
 ]
 Condition = Literal["New", "Like new", "Good", "Fair"]
-ItemStatus = Literal["available", "swapped"]
-SwapStatus = Literal["pending", "accepted", "declined", "cancelled"]
+ItemStatus = Literal["available", "reserved", "swapped"]  # reserved = accepted, waiting for the fee
+# accepted = fee paid, swap confirmed
+SwapStatus = Literal["pending", "awaiting_payment", "accepted", "declined", "cancelled", "expired"]
 
 
 class User(BaseModel):
@@ -16,7 +19,6 @@ class User(BaseModel):
     email: str
     name: str
     picture: Optional[str] = None
-    credits: int = 0
     created_at: str
 
 
@@ -49,11 +51,15 @@ class Item(ItemBase):
     owner_id: str
     owner_name: str
     owner_picture: Optional[str] = None
-    credit_cost: int
     status: ItemStatus = "available"
     created_at: str
     owner_rating_avg: Optional[float] = None  # filled at read time from the owner's ratings
     owner_rating_count: int = 0
+
+    @computed_field
+    @property
+    def processing_fee_cents(self) -> int:
+        return processing_fee_cents(self.value_eur)
 
 
 class ItemSummary(BaseModel):
@@ -61,7 +67,6 @@ class ItemSummary(BaseModel):
     title: str
     image_url: str
     value_eur: float
-    credit_cost: int
 
 
 class UploadResult(BaseModel):
@@ -76,7 +81,7 @@ class AuthProviders(BaseModel):
 
 NotificationKind = Literal[
     "swap_offer", "swap_accepted", "swap_declined", "message",
-    "swap_posted", "swap_received", "rating", "saved_search",
+    "swap_posted", "swap_received", "rating", "saved_search", "swap_confirmed",
 ]
 
 
@@ -141,8 +146,9 @@ class Swap(BaseModel):
     owner_name: str
     target_item: ItemSummary
     offered_item: ItemSummary
-    proposer_cost: int  # proposer receives target item
-    owner_cost: int  # owner receives offered item
+    fee_cents: int  # processing fee paid by the proposer (5% of target item value, €0.99–€19.99)
+    payment_due_at: Optional[str] = None  # set when the owner accepts; unpaid swaps expire after 48h
+    fee_paid: bool = False
     message: str = ""
     status: SwapStatus = "pending"
     created_at: str
@@ -156,6 +162,8 @@ class Swap(BaseModel):
     owner_received_at: Optional[str] = None
     proposer_rated: bool = False
     owner_rated: bool = False
+    proposer_label_id: Optional[str] = None
+    owner_label_id: Optional[str] = None
 
 
 class PostedUpdate(BaseModel):
@@ -210,25 +218,52 @@ class SwapLists(BaseModel):
     outgoing: List[Swap]
 
 
-class CreditPack(BaseModel):
-    id: str
-    credits: int
-    amount_cents: int
-    label: str
-    popular: bool = False
-
-
-class CreditTx(BaseModel):
-    id: str
-    user_id: str
-    amount: int
-    reason: str
-    created_at: str
-
-
-class CheckoutRequest(BaseModel):
-    pack_id: str
+class SwapFeeCheckout(BaseModel):
+    swap_id: str
     origin_url: str
+
+
+class Address(BaseModel):
+    name: str = Field(min_length=2, max_length=60)
+    line1: str = Field(min_length=3, max_length=80)
+    line2: str = Field(default="", max_length=80)
+    city: str = Field(min_length=2, max_length=50)
+    postcode: str = Field(default="", max_length=12)
+    country: str = Field(default="Ireland", min_length=2, max_length=40)
+
+
+LabelSizeId = Literal["small", "medium", "large", "xl"]
+
+
+class LabelSize(BaseModel):
+    id: LabelSizeId
+    label: str
+    description: str
+    base_cents: int
+    price_cents: int
+
+
+class LabelCheckout(BaseModel):
+    swap_id: str
+    size: LabelSizeId
+    sender: Address
+    recipient: Address
+    origin_url: str
+
+
+class ShippingLabel(BaseModel):
+    id: str
+    swap_id: str
+    user_id: str
+    size: LabelSizeId
+    price_cents: int
+    sender: Address
+    recipient: Address
+    status: Literal["pending_payment", "paid"]
+    carrier: str
+    tracking_number: Optional[str] = None
+    is_demo: bool = True  # DEMO until a real carrier (Sendcloud/Shippo) is connected
+    created_at: str
 
 
 class CheckoutResponse(BaseModel):
@@ -236,8 +271,22 @@ class CheckoutResponse(BaseModel):
     session_id: str
 
 
+PaymentKind = Literal["swap_fee", "label"]
+
+
 class PaymentStatus(BaseModel):
     session_id: str
     status: str
     payment_status: str
-    credits: int
+    kind: PaymentKind
+    swap_id: str
+    label_id: Optional[str] = None
+
+
+class PaymentRecord(BaseModel):
+    session_id: str
+    kind: PaymentKind
+    description: str
+    amount_cents: int
+    payment_status: str
+    created_at: str

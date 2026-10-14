@@ -16,11 +16,11 @@ Paste this file into the new mobile project. The app must reuse the existing USw
 5. List item — camera/gallery picker (up to 4), resize to ~1200px JPEG, upload each with `POST /uploads` (multipart field `file`) → `{url}`, then `POST /items {title, description, category, condition, value_eur, location, images}`.
 6. Swaps — tabs: Offers for me / My offers (`GET /swaps`), accept/decline/cancel (`POST /swaps/{id}/accept|decline|cancel`).
 7. Chat — `GET/POST /swaps/{id}/messages` (accepted swaps only), poll ~4s.
-8. Wallet — balance (`GET /auth/me`), history (`GET /credits/history`), packs (`GET /credits/packs`). Buying: `POST /payments/checkout {pack_id, origin_url}` → open `checkout_url` in the browser, then poll `GET /payments/status/{session_id}`. NOTE: Apple/Google store rules may require in-app purchases for digital credits — check before submitting.
+8. Payments — after acceptance the proposer pays the processing fee: `POST /payments/swap-fee {swap_id, origin_url}` → open `checkout_url`, poll `GET /payments/status/{session_id}`. Optional label: `GET /shipping/sizes`, `POST /payments/label {...}`, PDF at `GET /labels/{id}/pdf`. History: `GET /payments/history`. (Fees are for a real-world service between users, which generally may use Stripe rather than in-app purchase — confirm with store guidelines.)
 9. Notifications — `GET /notifications`, `POST /notifications/{id}/read`, `POST /notifications/read-all`.
 
-## Credit rules (display only — server enforces)
-<€10 = 1, €10–49 = 2, €50–99 = 4, €100–249 = 8, €250+ = 4% of value (min 10, max 50). Both swappers pay, on acceptance, for the item they receive. Each swapper pays their own postage.
+## Fee rules (display only — server enforces)
+Free to list/offer. Proposer pays 5% of the target item's value (min €0.99, max €19.99) within 48h of acceptance. Senders pay their own postage; labels optional (DEMO for now).
 
 ## Native push (backend work needed later)
 Web push already exists (VAPID). Native push needs a new backend endpoint to store Expo push tokens and send via Expo's push API — add when the mobile project starts.

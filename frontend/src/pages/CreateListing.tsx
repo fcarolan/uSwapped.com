@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Coins, ImageIcon, Truck } from "lucide-react";
+import { BadgeEuro, ImageIcon, Truck } from "lucide-react";
 import PhotoUploader from "@/components/PhotoUploader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiPost } from "@/lib/api";
 import { CATEGORIES, CONDITIONS, type Category, type Condition, type Item, type ItemCreate } from "@/lib/types";
-import { creditsForValue, eur } from "@/lib/credits";
+import { eur, euro, processingFeeCents } from "@/lib/fees";
 import { errorMessage } from "@/lib/hooks";
 
 const field = "h-11 rounded-xl border-2 border-slate-900 bg-white";
@@ -27,7 +27,7 @@ export default function CreateListing() {
   const [value, setValue] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
   const [location, setLocation] = useState("");
-  const credits = creditsForValue(Number(value));
+  const fee = processingFeeCents(Number(value));
 
   const create = useMutation({
     mutationFn: (body: ItemCreate) => apiPost<Item>("/items", body),
@@ -58,7 +58,7 @@ export default function CreateListing() {
   return (
     <div className="mx-auto max-w-6xl px-6 py-12">
       <h1 className="text-4xl font-extrabold text-slate-900 sm:text-5xl" data-testid="create-listing-title">List an item to swap</h1>
-      <p className="mt-2 text-slate-600">Takes about a minute. Your credit cost updates as you type.</p>
+      <p className="mt-2 text-slate-600">Takes about a minute, and listing is always free.</p>
 
       <div className="mt-10 grid gap-10 lg:grid-cols-[1.4fr_1fr]">
         <form onSubmit={submit} className="brutal space-y-5 rounded-3xl bg-white p-6 sm:p-8" data-testid="create-listing-form">
@@ -133,15 +133,18 @@ export default function CreateListing() {
             </div>
           </div>
           <div className="brutal rounded-2xl bg-amber-300 p-5">
-            <p className="text-xs font-bold uppercase tracking-[0.16em]">Swap cost for this item</p>
-            <p key={credits} className="mt-1 inline-flex animate-pop-in items-center gap-2 font-heading text-4xl font-extrabold" data-testid="listing-credit-preview">
-              <Coins className="size-8" /> {credits} {credits === 1 ? "credit" : "credits"}
+            <p className="text-xs font-bold uppercase tracking-[0.16em]">Listing fee</p>
+            <p className="mt-1 inline-flex items-center gap-2 font-heading text-4xl font-extrabold" data-testid="listing-fee-free">
+              <BadgeEuro className="size-8" /> Free
             </p>
-            <p className="mt-2 text-xs text-slate-800">Paid by whoever receives your item, when you accept their offer.</p>
+            <p key={fee} className="mt-2 animate-pop-in text-xs text-slate-800" data-testid="listing-fee-preview">
+              Someone who wants your item pays a {fee > 0 ? <strong>{euro(fee)}</strong> : "small"} processing fee (5%) when you
+              accept their offer. You pay nothing.
+            </p>
           </div>
           <div className="flex gap-3 rounded-2xl border-2 border-slate-900 bg-sky-100 p-4 text-sm">
             <Truck className="size-5 shrink-0" />
-            <p>You'll post this item yourself and cover postage &amp; packaging once a swap is agreed.</p>
+            <p>You'll post this item yourself and cover postage &amp; packaging once a swap is confirmed. You can buy a tracked label in the app.</p>
           </div>
         </aside>
       </div>

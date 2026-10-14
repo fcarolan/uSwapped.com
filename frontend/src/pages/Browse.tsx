@@ -8,7 +8,7 @@ import { apiGet, apiPost } from "@/lib/api";
 import { CATEGORIES, type Category, type Item, type SavedSearch, type SavedSearchCreate } from "@/lib/types";
 import { errorMessage, startGoogleLogin, useMe } from "@/lib/hooks";
 import ItemCard, { ItemCardSkeleton } from "@/components/ItemCard";
-import CreditCalculator from "@/components/CreditCalculator";
+import FeeCalculator from "@/components/FeeCalculator";
 import { cn } from "@/lib/utils";
 
 export default function Browse() {
@@ -173,7 +173,7 @@ export default function Browse() {
           )}
         </div>
         <aside className="lg:sticky lg:top-24 lg:self-start">
-          <CreditCalculator />
+          <FeeCalculator />
         </aside>
       </div>
     </div>

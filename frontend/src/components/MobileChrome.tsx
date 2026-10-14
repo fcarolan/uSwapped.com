@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
-import { Home, LayoutGrid, Plus, Coins, User, Download, Share, X } from "lucide-react";
+import { Home, LayoutGrid, Plus, Tag, User, Download, Share, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const TABS = [
   { to: "/", label: "Home", icon: Home, testid: "tab-bar-home", end: true },
   { to: "/browse", label: "Browse", icon: LayoutGrid, testid: "tab-bar-browse", end: false },
   { to: "/list", label: "List", icon: Plus, testid: "tab-bar-list", end: false, primary: true },
-  { to: "/credits", label: "Credits", icon: Coins, testid: "tab-bar-credits", end: false },
+  { to: "/pricing", label: "Pricing", icon: Tag, testid: "tab-bar-pricing", end: false },
   { to: "/dashboard", label: "Me", icon: User, testid: "tab-bar-me", end: false },
 ];
 

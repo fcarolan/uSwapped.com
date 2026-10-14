@@ -15,15 +15,15 @@ export type Category = (typeof CATEGORIES)[number];
 export const CONDITIONS = ["New", "Like new", "Good", "Fair"] as const;
 export type Condition = (typeof CONDITIONS)[number];
 
-export type ItemStatus = "available" | "swapped";
-export type SwapStatus = "pending" | "accepted" | "declined" | "cancelled";
+export type ItemStatus = "available" | "reserved" | "swapped"; // reserved = accepted, waiting for the fee
+// accepted = fee paid, swap confirmed
+export type SwapStatus = "pending" | "awaiting_payment" | "accepted" | "declined" | "cancelled" | "expired";
 
 export interface User {
   user_id: string;
   email: string;
   name: string;
   picture: string | null;
-  credits: number;
   created_at: string;
 }
 
@@ -43,13 +43,13 @@ export interface ItemCreate extends ItemBase {
 export interface Item extends ItemBase {
   owner_rating_avg: number | null; // filled server-side from the owner's ratings
   owner_rating_count: number;
+  processing_fee_cents: number; // computed server-side: 5% of value, €0.99–€19.99
   id: string;
   image_url: string; // cover = images[0]
   images: string[];
   owner_id: string;
   owner_name: string;
   owner_picture: string | null;
-  credit_cost: number;
   status: ItemStatus;
   created_at: string;
 }
@@ -59,7 +59,6 @@ export interface ItemSummary {
   title: string;
   image_url: string;
   value_eur: number;
-  credit_cost: number;
 }
 
 export interface SwapCreate {
@@ -76,8 +75,9 @@ export interface Swap {
   owner_name: string;
   target_item: ItemSummary;
   offered_item: ItemSummary;
-  proposer_cost: number;
-  owner_cost: number;
+  fee_cents: number; // processing fee paid by the proposer
+  payment_due_at: string | null; // set on acceptance; unpaid swaps expire after 48h
+  fee_paid: boolean;
   message: string;
   status: SwapStatus;
   created_at: string;
@@ -91,6 +91,8 @@ export interface Swap {
   owner_received_at: string | null;
   proposer_rated: boolean;
   owner_rated: boolean;
+  proposer_label_id: string | null;
+  owner_label_id: string | null;
 }
 
 export interface PostedUpdate {
@@ -145,22 +147,6 @@ export interface SwapLists {
   outgoing: Swap[];
 }
 
-export interface CreditPack {
-  id: string;
-  credits: number;
-  amount_cents: number;
-  label: string;
-  popular: boolean;
-}
-
-export interface CreditTx {
-  id: string;
-  user_id: string;
-  amount: number;
-  reason: string;
-  created_at: string;
-}
-
 export interface UploadResult {
   id: string;
   url: string;
@@ -171,11 +157,71 @@ export interface CheckoutResponse {
   session_id: string;
 }
 
+export type PaymentKind = "swap_fee" | "label";
+
 export interface PaymentStatus {
   session_id: string;
   status: string;
   payment_status: string;
-  credits: number;
+  kind: PaymentKind;
+  swap_id: string;
+  label_id: string | null;
+}
+
+export interface PaymentRecord {
+  session_id: string;
+  kind: PaymentKind;
+  description: string;
+  amount_cents: number;
+  payment_status: string;
+  created_at: string;
+}
+
+export interface SwapFeeCheckout {
+  swap_id: string;
+  origin_url: string;
+}
+
+export interface Address {
+  name: string;
+  line1: string;
+  line2: string;
+  city: string;
+  postcode: string;
+  country: string;
+}
+
+export type LabelSizeId = "small" | "medium" | "large" | "xl";
+
+export interface LabelSize {
+  id: LabelSizeId;
+  label: string;
+  description: string;
+  base_cents: number;
+  price_cents: number;
+}
+
+export interface LabelCheckout {
+  swap_id: string;
+  size: LabelSizeId;
+  sender: Address;
+  recipient: Address;
+  origin_url: string;
+}
+
+export interface ShippingLabel {
+  id: string;
+  swap_id: string;
+  user_id: string;
+  size: LabelSizeId;
+  price_cents: number;
+  sender: Address;
+  recipient: Address;
+  status: "pending_payment" | "paid";
+  carrier: string;
+  tracking_number: string | null;
+  is_demo: boolean; // DEMO until a real carrier is connected
+  created_at: string;
 }
 
 export interface AuthProviders {
@@ -191,7 +237,8 @@ export type NotificationKind =
   | "swap_posted"
   | "swap_received"
   | "rating"
-  | "saved_search";
+  | "saved_search"
+  | "swap_confirmed";
 
 export interface Notification {
   id: string;

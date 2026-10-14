@@ -18,7 +18,7 @@ export default function Login() {
           Welcome to the swap club.
         </h1>
         <p className="mt-4 text-lg text-slate-700">
-          Sign in to list items, propose swaps and grab your <strong>3 free credits</strong>.
+          Sign in to list items for <strong>free</strong> and start swapping.
         </p>
         <div className="mt-8 hidden size-24 animate-float place-items-center rounded-3xl border-2 border-slate-900 bg-emerald-400 shadow-[4px_4px_0_#0f172a] md:grid">
           <ArrowLeftRight className="size-10" strokeWidth={2.75} />

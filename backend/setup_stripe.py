@@ -1,4 +1,6 @@
-"""Idempotent Stripe catalog setup for USwapped credit packs. Run: python setup_stripe.py"""
+"""Idempotent Stripe catalog setup for USwapped. Run: python setup_stripe.py
+Products only: amounts are dynamic (processing fee = 5% of item value; label price by size) and are sent
+as inline price_data at checkout. Retires the old Swap Credit packs."""
 import os
 import stripe
 from dotenv import load_dotenv
@@ -7,41 +9,26 @@ from pathlib import Path
 load_dotenv(Path(__file__).parent / ".env")
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY") or "sk_test_emergent"
 
-from lib.credits import CREDIT_PACKS  # noqa: E402
-
-CATALOG = [
-    {
-        "emergent_product_id": f"uswapped_{p['id']}",
-        "name": f"USwapped {p['credits']} Swap Credits",
-        "tax_code": "txcd_10000000",
-        "prices": [{"lookup_key": p["lookup_key"], "amount": p["amount_cents"], "currency": "eur"}],
-    }
-    for p in CREDIT_PACKS
+PRODUCTS = [
+    {"emergent_product_id": "uswapped_processing_fee", "name": "USwapped swap processing fee", "tax_code": "txcd_10000000"},
+    {"emergent_product_id": "uswapped_shipping_label", "name": "USwapped shipping label", "tax_code": "txcd_10000000"},
 ]
-
-
-def get_or_create_product(entry):
-    for p in stripe.Product.list(active=True).auto_paging_iter():
-        if p.to_dict().get("metadata", {}).get("emergent_product_id") == entry["emergent_product_id"]:
-            return p
-    return stripe.Product.create(
-        name=entry["name"], tax_code=entry["tax_code"],
-        metadata={"managed_by": "emergent", "emergent_product_id": entry["emergent_product_id"]},
-    )
+RETIRED_LOOKUP_KEYS = ["uswapped_credits_10", "uswapped_credits_20", "uswapped_credits_50", "uswapped_credits_100"]
 
 
 def main():
-    for entry in CATALOG:
-        product = get_or_create_product(entry)
-        for p in entry["prices"]:
-            existing = stripe.Price.list(lookup_keys=[p["lookup_key"]], active=True, limit=1).data
-            if existing and (existing[0].unit_amount != p["amount"] or existing[0].currency != p["currency"]):
-                stripe.Price.modify(existing[0].id, active=False)
-                existing = []
-            if not existing:
-                stripe.Price.create(product=product.id, unit_amount=p["amount"], currency=p["currency"],
-                                    lookup_key=p["lookup_key"], transfer_lookup_key=True)
-            print("ok", p["lookup_key"])
+    existing = {p.to_dict().get("metadata", {}).get("emergent_product_id"): p
+                for p in stripe.Product.list(active=True, limit=100).auto_paging_iter()}
+    for entry in PRODUCTS:
+        if entry["emergent_product_id"] not in existing:
+            stripe.Product.create(name=entry["name"], tax_code=entry["tax_code"],
+                                  metadata={"managed_by": "emergent", "emergent_product_id": entry["emergent_product_id"]})
+        print("ok", entry["emergent_product_id"])
+    # retire credit packs
+    for price in stripe.Price.list(lookup_keys=RETIRED_LOOKUP_KEYS, active=True, limit=10).data:
+        stripe.Price.modify(price.id, active=False)
+        stripe.Product.modify(price.product, active=False)
+        print("retired", price.lookup_key)
 
 
 if __name__ == "__main__":

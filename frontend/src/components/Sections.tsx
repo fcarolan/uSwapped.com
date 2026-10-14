@@ -1,14 +1,14 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { Coins, Handshake, Package, Search, Upload } from "lucide-react";
-import { CREDIT_TIERS } from "@/lib/credits";
+import { Handshake, Package, Search, Upload } from "lucide-react";
+import { FEE_EXAMPLES, eur, euro, processingFeeCents } from "@/lib/fees";
 import { cn } from "@/lib/utils";
 
 const STEPS = [
-  { icon: Upload, title: "List it", body: "Snap a photo, add an estimated value. We work out the credit cost instantly.", bg: "bg-emerald-100" },
-  { icon: Search, title: "Find a swap", body: "Browse items near you and offer one of yours in exchange.", bg: "bg-amber-100" },
-  { icon: Handshake, title: "Agree & pay credits", body: "When the owner accepts, each swapper spends credits for the item they receive.", bg: "bg-violet-100" },
-  { icon: Package, title: "Post it", body: "You each pack and post your own item at your own cost. Enjoy your new thing!", bg: "bg-sky-100" },
+  { icon: Upload, title: "List it free", body: "Snap a photo and add an estimated value. Listing is always free.", bg: "bg-emerald-100" },
+  { icon: Search, title: "Offer a swap", body: "Found something you love? Offer one of your items in exchange. Offers are free too.", bg: "bg-amber-100" },
+  { icon: Handshake, title: "Accepted? Complete it", body: "When the owner says yes, you pay a small processing fee (5% of the item's value) to confirm the swap.", bg: "bg-pink-100" },
+  { icon: Package, title: "Post it", body: "Each of you posts your own item at your own cost. Buy a tracked shipping label in the app if you like.", bg: "bg-sky-100" },
 ];
 
 export function HowSteps() {
@@ -32,47 +32,51 @@ export function HowSteps() {
   );
 }
 
-export function TierTable() {
+export function FeeTable() {
   return (
-    <div className="brutal overflow-hidden rounded-2xl bg-white" data-testid="credit-tier-table">
-      <div className="grid grid-cols-[1fr_1.4fr_auto] gap-4 border-b-2 border-slate-900 bg-slate-900 px-5 py-3 text-xs font-bold uppercase tracking-[0.16em] text-white">
-        <span>Item value</span>
-        <span className="hidden sm:block">Typical items</span>
-        <span className="text-right">Credits</span>
+    <div className="brutal overflow-hidden rounded-2xl bg-white" data-testid="fee-table">
+      <div className="grid grid-cols-[1.4fr_1fr_auto] gap-4 border-b-2 border-slate-900 bg-slate-900 px-5 py-3 text-xs font-bold uppercase tracking-[0.16em] text-white">
+        <span>You want</span>
+        <span>Est. value</span>
+        <span className="text-right">Swap fee</span>
       </div>
-      {CREDIT_TIERS.map((t, i) => (
+      {FEE_EXAMPLES.map((t, i) => (
         <div
-          key={t.label}
-          data-testid={`credit-tier-row-${i}`}
-          className="grid grid-cols-[1fr_1.4fr_auto] items-center gap-4 border-b border-slate-200 px-5 py-3.5 last:border-b-0 transition-colors duration-150 hover:bg-amber-50"
+          key={t.item}
+          data-testid={`fee-row-${i}`}
+          className="grid grid-cols-[1.4fr_1fr_auto] items-center gap-4 border-b border-slate-200 px-5 py-3.5 last:border-b-0 transition-colors duration-150 hover:bg-amber-50"
         >
-          <span className="font-mono text-sm font-semibold">{t.label}</span>
-          <span className="hidden text-sm text-slate-600 sm:block">{t.example}</span>
-          <span className="inline-flex items-center justify-end gap-1 text-right font-heading font-extrabold">
-            <Coins className="size-4 text-amber-600" /> {t.credits}
+          <span className="text-sm font-semibold">{t.item}</span>
+          <span className="font-mono text-sm text-slate-600">{eur(t.value)}</span>
+          <span className="text-right">
+            <span className="font-heading font-extrabold">{euro(processingFeeCents(t.value))}</span>
+            <span className="ml-1.5 text-[10px] font-bold uppercase text-slate-400">{t.note}</span>
           </span>
         </div>
       ))}
+      <div className="bg-emerald-50 px-5 py-3 text-xs text-slate-600">
+        Listing and making offers are free. The fee is only charged to the person requesting the swap, after the owner accepts.
+      </div>
     </div>
   );
 }
 
 const FAQS = [
   {
-    q: "Is swapping really free?",
-    a: "No money changes hands between swappers. You use Swap Credits to confirm a swap — new members get 3 free credits, and packs start at €1.99.",
+    q: "Is it free to list?",
+    a: "Yes. Listing items and making swap offers are completely free. No money changes hands between swappers.",
+  },
+  {
+    q: "What's the processing fee?",
+    a: "When an owner accepts your offer, you pay 5% of the estimated value of the item you're getting (minimum €0.99, maximum €19.99) to confirm the swap. A €20 book costs €1.00, and a €600 laptop is capped at €19.99.",
+  },
+  {
+    q: "What if I don't pay?",
+    a: "You have 48 hours after your offer is accepted. If you don't pay in that time, the swap expires and both items go back on the market. Declined or cancelled offers cost nothing.",
   },
   {
     q: "Who pays for postage?",
-    a: "Each swapper sorts the postage and packaging for the item they're sending, at their own cost. Once a swap is accepted you'll both see each other's contact email to arrange it.",
-  },
-  {
-    q: "When are credits taken?",
-    a: "Only when a swap is accepted. Proposing is free — you just need enough credits in your wallet. Declined or cancelled offers cost nothing.",
-  },
-  {
-    q: "Why do bigger items cost more credits?",
-    a: "Credits scale with value so a €5 paperback costs 1 credit, while a €600 laptop costs around 24 (4%, capped at 50). It keeps small swaps cheap and big swaps fair.",
+    a: "Whoever sends an item pays for its postage and packaging. If you like, you can buy a tracked shipping label right in the app (from €5.00), and the tracking number is shared with your swap partner automatically.",
   },
 ];
 

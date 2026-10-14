@@ -5,7 +5,6 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 
 from lib.auth import get_current_user, now_iso
-from lib.credits import credits_for_value
 from lib.db import db
 from lib.search import items_query, with_owner_ratings
 from models.schemas import Item, ItemCreate
@@ -44,7 +43,7 @@ async def create_item(body: ItemCreate, user: dict = Depends(get_current_user)):
             raise HTTPException(status_code=400, detail="One of the photos could not be found, please re-upload it")
     item = Item(
         **body.model_dump(), image_url=body.images[0], id=str(uuid.uuid4()), owner_id=user["user_id"], owner_name=user["name"],
-        owner_picture=user.get("picture"), credit_cost=credits_for_value(body.value_eur), created_at=now_iso(),
+        owner_picture=user.get("picture"), created_at=now_iso(),
     )
     await db.items.insert_one(item.model_dump())
     asyncio.create_task(alert_saved_searches(item.model_dump()))

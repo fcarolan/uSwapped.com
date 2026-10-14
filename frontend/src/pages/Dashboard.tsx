@@ -1,11 +1,12 @@
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeftRight, Bell, Check, Coins, Mail, MessageCircle, Plus, Search, Trash2, X } from "lucide-react";
+import { ArrowLeftRight, BadgeEuro, Bell, Check, Clock, CreditCard, Mail, MessageCircle, Plus, Search, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiDelete, apiGet, apiPost } from "@/lib/api";
-import type { CreditTx, Item, SavedSearch, Swap, SwapLists } from "@/lib/types";
+import type { CheckoutResponse, Item, PaymentRecord, SavedSearch, Swap, SwapFeeCheckout, SwapLists } from "@/lib/types";
+import { euro } from "@/lib/fees";
 import SwapProgress from "@/components/SwapProgress";
 import { errorMessage, useMe } from "@/lib/hooks";
 import ItemCard from "@/components/ItemCard";
@@ -13,10 +14,26 @@ import { cn } from "@/lib/utils";
 
 const STATUS_STYLE: Record<Swap["status"], string> = {
   pending: "bg-amber-100 text-amber-900",
+  awaiting_payment: "bg-pink-100 text-pink-900",
   accepted: "bg-emerald-100 text-emerald-900",
   declined: "bg-red-100 text-red-800",
   cancelled: "bg-slate-100 text-slate-600",
+  expired: "bg-slate-100 text-slate-600",
 };
+const STATUS_LABEL: Record<Swap["status"], string> = {
+  pending: "Pending",
+  awaiting_payment: "Awaiting fee",
+  accepted: "Confirmed",
+  declined: "Declined",
+  cancelled: "Cancelled",
+  expired: "Expired",
+};
+
+function dueText(iso: string | null): string {
+  if (!iso) return "";
+  const h = Math.max(0, (new Date(iso).getTime() - Date.now()) / 3_600_000);
+  return h >= 1 ? `${Math.floor(h)}h left` : `${Math.max(1, Math.round(h * 60))}m left`;
+}
 
 function SwapRow({ swap, incoming, viewerId }: { swap: Swap; incoming: boolean; viewerId: string | undefined }) {
   const qc = useQueryClient();
@@ -26,16 +43,19 @@ function SwapRow({ swap, incoming, viewerId }: { swap: Swap; incoming: boolean; 
       qc.invalidateQueries({ queryKey: ["swaps"] });
       qc.invalidateQueries({ queryKey: ["me"] });
       qc.invalidateQueries({ queryKey: ["items"] });
-      qc.invalidateQueries({ queryKey: ["credit-history"] });
-      toast.success(action === "accept" ? "Swap accepted! Time to pack your item 📦" : `Offer ${action}ed`);
+      toast.success(action === "accept" ? "Accepted! We've asked them to pay the processing fee to confirm 🎉" : `Offer ${action}ed`);
     },
     onError: (e) => toast.error(errorMessage(e)),
   });
   // what *I* give / get
   const give = incoming ? swap.target_item : swap.offered_item;
   const get = incoming ? swap.offered_item : swap.target_item;
-  const myCost = incoming ? swap.owner_cost : swap.proposer_cost;
   const other = incoming ? swap.proposer_name : swap.owner_name;
+  const pay = useMutation({
+    mutationFn: (body: SwapFeeCheckout) => apiPost<CheckoutResponse>("/payments/swap-fee", body),
+    onSuccess: (r) => window.location.assign(r.checkout_url),
+    onError: (e) => toast.error(errorMessage(e, "Couldn't start the payment")),
+  });
 
   return (
     <div data-testid={`swap-row-${swap.id}`} className="brutal rounded-2xl bg-white p-4">
@@ -52,15 +72,36 @@ function SwapRow({ swap, incoming, viewerId }: { swap: Swap; incoming: boolean; 
             You get <strong>{get.title}</strong>
           </p>
           <p className="text-xs text-slate-500">
-            {incoming ? "From" : "To"} {other} · you pay <strong>{myCost}</strong> cr
+            {incoming ? "From" : "To"} {other} · {incoming ? "free for you" : <>swap fee <strong>{euro(swap.fee_cents)}</strong></>}
           </p>
           {swap.message && <p className="mt-1 truncate text-xs italic text-slate-500">"{swap.message}"</p>}
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <span data-testid={`swap-status-${swap.id}`} className={cn("rounded-full px-3 py-1 text-xs font-bold capitalize", STATUS_STYLE[swap.status])}>
-          {swap.status}
+          {STATUS_LABEL[swap.status]}
         </span>
+        {swap.status === "awaiting_payment" && !incoming && (
+          <>
+            <Button
+              size="sm"
+              data-testid={`swap-pay-fee-${swap.id}`}
+              disabled={pay.isPending}
+              onClick={() => pay.mutate({ swap_id: swap.id, origin_url: window.location.origin })}
+              className="brutal brutal-hover rounded-full bg-emerald-400 text-slate-900 hover:bg-emerald-300"
+            >
+              <CreditCard className="size-4" /> {pay.isPending ? "Opening checkout…" : `Pay ${euro(swap.fee_cents)} to complete`}
+            </Button>
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-pink-800" data-testid={`swap-due-${swap.id}`}>
+              <Clock className="size-3.5" /> {dueText(swap.payment_due_at)}
+            </span>
+          </>
+        )}
+        {swap.status === "awaiting_payment" && incoming && (
+          <span className="inline-flex items-center gap-1 text-xs text-slate-600" data-testid={`swap-waiting-fee-${swap.id}`}>
+            <Clock className="size-3.5" /> Waiting for {other.split(" ")[0]} to pay the fee · {dueText(swap.payment_due_at)}
+          </span>
+        )}
         {swap.status === "pending" && incoming && (
           <>
             <Button size="sm" data-testid={`swap-accept-${swap.id}`} disabled={act.isPending} onClick={() => act.mutate("accept")} className="rounded-full">
@@ -71,7 +112,7 @@ function SwapRow({ swap, incoming, viewerId }: { swap: Swap; incoming: boolean; 
             </Button>
           </>
         )}
-        {swap.status === "pending" && !incoming && (
+        {(swap.status === "pending" || swap.status === "awaiting_payment") && !incoming && (
           <Button size="sm" variant="outline" data-testid={`swap-cancel-${swap.id}`} disabled={act.isPending} onClick={() => act.mutate("cancel")} className="rounded-full">
             Cancel
           </Button>
@@ -160,10 +201,11 @@ export default function Dashboard() {
   const tab = params.get("tab") ?? "incoming";
   const swaps = useQuery({ queryKey: ["swaps"], queryFn: () => apiGet<SwapLists>("/swaps") });
   const mine = useQuery({ queryKey: ["items", "mine"], queryFn: () => apiGet<Item[]>("/items/mine") });
-  const history = useQuery({ queryKey: ["credit-history"], queryFn: () => apiGet<CreditTx[]>("/credits/history") });
+  const history = useQuery({ queryKey: ["payment-history"], queryFn: () => apiGet<PaymentRecord[]>("/payments/history") });
   const incoming = swaps.isError ? [] : (swaps.data?.incoming ?? []);
   const outgoing = swaps.isError ? [] : (swaps.data?.outgoing ?? []);
   const pendingIn = incoming.filter((s) => s.status === "pending").length;
+  const toPay = outgoing.filter((s) => s.status === "awaiting_payment").length;
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-12">
@@ -174,17 +216,21 @@ export default function Dashboard() {
             Hey {me?.name.split(" ")[0] ?? "swapper"} 👋
           </h1>
           <p className="mt-2 text-slate-600">
-            {pendingIn > 0 ? `You have ${pendingIn} swap offer${pendingIn > 1 ? "s" : ""} waiting for you.` : "Here's everything happening with your swaps."}
+            {toPay > 0
+              ? `${toPay} of your offers ${toPay > 1 ? "were" : "was"} accepted! Pay the processing fee to confirm.`
+              : pendingIn > 0
+                ? `You have ${pendingIn} swap offer${pendingIn > 1 ? "s" : ""} waiting for you.`
+                : "Here's everything happening with your swaps."}
           </p>
         </div>
-        <div className="brutal relative overflow-hidden rounded-3xl bg-amber-300 p-6" data-testid="wallet-card">
-          <Coins className="absolute -right-4 -top-4 size-28 text-amber-500/40" />
-          <p className="text-xs font-bold uppercase tracking-[0.18em]">Swap wallet</p>
-          <p className="mt-1 font-heading text-5xl font-extrabold" data-testid="wallet-balance">{me?.credits ?? 0}</p>
-          <p className="text-sm font-semibold">credits available</p>
+        <div className="brutal relative overflow-hidden rounded-3xl bg-amber-300 p-6" data-testid="summary-card">
+          <BadgeEuro className="absolute -right-4 -top-4 size-28 text-amber-500/40" />
+          <p className="text-xs font-bold uppercase tracking-[0.18em]">Listing is free</p>
+          <p className="mt-1 font-heading text-5xl font-extrabold" data-testid="summary-listings-count">{(mine.data ?? []).filter((i) => i.status === "available").length}</p>
+          <p className="text-sm font-semibold">items up for swaps</p>
           <div className="mt-4 flex gap-2">
-            <Link to="/credits" data-testid="wallet-buy-credits" className="brutal brutal-hover rounded-full bg-slate-900 px-4 py-2 text-sm font-bold text-white">
-              Buy credits
+            <Link to="/pricing" data-testid="summary-pricing-link" className="brutal brutal-hover rounded-full bg-slate-900 px-4 py-2 text-sm font-bold text-white">
+              Pricing
             </Link>
             <Link to="/list" data-testid="wallet-list-item" className="brutal brutal-hover inline-flex items-center gap-1 rounded-full bg-white px-4 py-2 text-sm font-bold">
               <Plus className="size-4" /> List item
@@ -199,7 +245,7 @@ export default function Dashboard() {
             Offers for me {pendingIn > 0 && `(${pendingIn})`}
           </TabsTrigger>
           <TabsTrigger value="outgoing" data-testid="tab-outgoing" className="rounded-full px-4 py-1.5 data-active:bg-slate-900 data-active:text-white">
-            My offers
+            My offers {toPay > 0 && `(${toPay} to pay)`}
           </TabsTrigger>
           <TabsTrigger value="listings" data-testid="tab-listings" className="rounded-full px-4 py-1.5 data-active:bg-slate-900 data-active:text-white">
             My listings
@@ -207,8 +253,8 @@ export default function Dashboard() {
           <TabsTrigger value="saved" data-testid="tab-saved" className="rounded-full px-4 py-1.5 data-active:bg-slate-900 data-active:text-white">
             Saved searches
           </TabsTrigger>
-          <TabsTrigger value="history" data-testid="tab-history" className="rounded-full px-4 py-1.5 data-active:bg-slate-900 data-active:text-white">
-            Credit history
+          <TabsTrigger value="payments" data-testid="tab-payments" className="rounded-full px-4 py-1.5 data-active:bg-slate-900 data-active:text-white">
+            Payments
           </TabsTrigger>
         </TabsList>
 
@@ -237,21 +283,18 @@ export default function Dashboard() {
         <TabsContent value="saved" className="mt-6">
           <SavedSearches />
         </TabsContent>
-        <TabsContent value="history" className="mt-6">
+        <TabsContent value="payments" className="mt-6">
           {(history.data ?? []).length === 0 || history.isError ? (
-            <Empty testid="history-empty" text="No credit activity yet." />
+            <Empty testid="payments-empty" text="No payments yet. Listing and offers are free." />
           ) : (
             <div className="brutal divide-y divide-slate-200 overflow-hidden rounded-2xl bg-white">
               {(history.data ?? []).map((t) => (
-                <div key={t.id} data-testid={`credit-tx-${t.id}`} className="flex items-center justify-between px-5 py-3.5">
+                <div key={t.session_id} data-testid={`payment-row-${t.session_id}`} className="flex items-center justify-between px-5 py-3.5">
                   <div>
-                    <p className="text-sm font-semibold">{t.reason}</p>
+                    <p className="text-sm font-semibold">{t.description}</p>
                     <p className="text-xs text-slate-500">{new Date(t.created_at).toLocaleString("en-IE", { dateStyle: "medium", timeStyle: "short" })}</p>
                   </div>
-                  <span className={cn("font-heading text-lg font-extrabold", t.amount > 0 ? "text-emerald-700" : "text-red-700")}>
-                    {t.amount > 0 ? "+" : ""}
-                    {t.amount}
-                  </span>
+                  <span className="font-heading text-lg font-extrabold text-slate-900">{euro(t.amount_cents)}</span>
                 </div>
               ))}
             </div>

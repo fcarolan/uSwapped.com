@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Check, PackageCheck, Star, Truck } from "lucide-react";
+import { Check, Download, PackageCheck, Star, Tag, Truck } from "lucide-react";
+import LabelDialog from "@/components/LabelDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,6 +24,8 @@ export function swapSides(swap: Swap, viewerId: string | undefined) {
     myReceived: iAmProposer ? swap.proposer_received_at : swap.owner_received_at,
     theirReceived: iAmProposer ? swap.owner_received_at : swap.proposer_received_at,
     iRated: iAmProposer ? swap.proposer_rated : swap.owner_rated,
+    myName: iAmProposer ? swap.proposer_name : swap.owner_name,
+    myLabelId: iAmProposer ? swap.proposer_label_id : swap.owner_label_id,
   };
 }
 
@@ -52,6 +55,7 @@ export default function SwapProgress({ swap, viewerId, compact = false }: { swap
   const s = swapSides(swap, viewerId);
   const [postOpen, setPostOpen] = useState(false);
   const [rateOpen, setRateOpen] = useState(false);
+  const [labelOpen, setLabelOpen] = useState(false);
   const [tracking, setTracking] = useState(s.myTracking ?? "");
   const [stars, setStars] = useState(5);
   const [comment, setComment] = useState("");
@@ -104,6 +108,23 @@ export default function SwapProgress({ swap, viewerId, compact = false }: { swap
         <Step testid="step-their-received" done={!!s.theirReceived} label={s.theirReceived ? `${first} received it · ${fmt(s.theirReceived)}` : `${first} receives yours`} />
       </ol>
       <div className="mt-4 flex flex-wrap gap-2">
+        {s.myLabelId ? (
+          <a
+            href={`/api/labels/${s.myLabelId}/pdf`}
+            target="_blank"
+            rel="noreferrer"
+            data-testid={`swap-download-label-${swap.id}`}
+            className="brutal brutal-hover inline-flex items-center gap-1.5 rounded-full bg-sky-200 px-3 py-1.5 text-xs font-bold text-slate-900"
+          >
+            <Download className="size-4" /> Download label <span className="rounded bg-amber-300 px-1 text-[10px]">DEMO</span>
+          </a>
+        ) : (
+          !s.myPosted && (
+            <Button size="sm" variant="outline" data-testid={`swap-buy-label-${swap.id}`} onClick={() => setLabelOpen(true)} className="rounded-full border-2 border-slate-900">
+              <Tag className="size-4" /> Buy tracked label · from €5
+            </Button>
+          )
+        )}
         {!s.myPosted ? (
           <Button size="sm" data-testid={`swap-mark-posted-${swap.id}`} onClick={() => setPostOpen(true)} className="brutal brutal-hover rounded-full">
             <Truck className="size-4" /> I've posted my item
@@ -136,6 +157,10 @@ export default function SwapProgress({ swap, viewerId, compact = false }: { swap
           </span>
         )}
       </div>
+
+      {labelOpen && (
+        <LabelDialog open={labelOpen} onOpenChange={setLabelOpen} swapId={swap.id} myName={s.myName} otherName={s.otherName} />
+      )}
 
       <Dialog open={postOpen} onOpenChange={setPostOpen}>
         <DialogContent className="rounded-3xl border-2 border-slate-900">

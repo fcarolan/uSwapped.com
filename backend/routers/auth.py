@@ -5,7 +5,6 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from lib.auth import get_current_user, now_iso
-from lib.credits import SIGNUP_BONUS
 from lib.db import db
 from models.schemas import MobileSession, SessionExchange, User
 
@@ -28,11 +27,7 @@ async def _exchange(session_id: str) -> tuple[dict, str]:
         user_id = f"user_{uuid.uuid4().hex[:12]}"
         await db.users.insert_one({
             "user_id": user_id, "email": data["email"], "name": data["name"],
-            "picture": data.get("picture"), "credits": SIGNUP_BONUS, "created_at": now_iso(),
-        })
-        await db.credit_transactions.insert_one({
-            "id": str(uuid.uuid4()), "user_id": user_id, "amount": SIGNUP_BONUS,
-            "reason": "Welcome bonus", "created_at": now_iso(),
+            "picture": data.get("picture"), "created_at": now_iso(),
         })
     user = await db.users.find_one({"email": data["email"]}, {"_id": 0})
 
