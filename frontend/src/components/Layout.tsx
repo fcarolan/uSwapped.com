@@ -1,5 +1,5 @@
-import { Link, NavLink, Outlet } from "react-router-dom";
-import { ArrowLeftRight, LayoutDashboard, LogOut, Plus, Menu } from "lucide-react";
+import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { ArrowLeftRight, LayoutDashboard, LogOut, Plus, Menu, ShieldCheck } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Toaster } from "@/components/ui/sonner";
-import { useMe, startGoogleLogin } from "@/lib/hooks";
+import { useMe } from "@/lib/hooks";
 import { endSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { InstallPrompt, MobileTabBar } from "@/components/MobileChrome";
@@ -62,6 +62,7 @@ const TOAST_MOBILE_OFFSET = { bottom: 88 };
 
 function Header() {
   const { data: me } = useMe();
+  const navigate = useNavigate();
   return (
     <header className="sticky top-0 z-50 border-b-2 border-slate-900 bg-[#FAFAF7]/85 pt-[env(safe-area-inset-top)] backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6">
@@ -99,6 +100,11 @@ function Header() {
                   <DropdownMenuItem data-testid="user-menu-dashboard" onClick={() => (window.location.href = "/dashboard")}>
                     <LayoutDashboard className="size-4" /> Dashboard
                   </DropdownMenuItem>
+                  {me.role === "admin" && (
+                    <DropdownMenuItem data-testid="user-menu-admin" onClick={() => (window.location.href = "/admin")}>
+                      <ShieldCheck className="size-4" /> Admin portal
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem data-testid="user-menu-logout" onClick={() => void endSession("/")}>
                     <LogOut className="size-4" /> Sign out
                   </DropdownMenuItem>
@@ -108,7 +114,7 @@ function Header() {
           ) : (
             <Button
               data-testid="header-signin-button"
-              onClick={startGoogleLogin}
+              onClick={() => navigate("/login")}
               className="brutal brutal-hover rounded-full"
             >
               Sign in

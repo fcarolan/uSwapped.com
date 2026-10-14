@@ -14,6 +14,7 @@ import PaymentSuccess from "@/pages/PaymentSuccess";
 import PaymentCancel from "@/pages/PaymentCancel";
 import Chat from "@/pages/Chat";
 import Profile from "@/pages/Profile";
+import Admin from "@/pages/Admin";
 
 // One <Route> per page in src/pages; BrowserRouter already wraps this in main.tsx.
 export default function App() {
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/list" element={<RequireAuth><CreateListing /></RequireAuth>} />
         <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
+        <Route path="/admin" element={<RequireAuth><Admin /></RequireAuth>} />
         <Route path="/users/:id" element={<Profile />} />
         <Route path="/swaps/:id/chat" element={<RequireAuth><Chat /></RequireAuth>} />
         <Route path="/payment/success" element={<PaymentSuccess />} />

@@ -13,7 +13,7 @@ load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
 from lib.db import client, ensure_indexes  # noqa: E402
-from routers import auth, items, swaps, payments, uploads, notifications, facebook, community  # noqa: E402
+from routers import auth, items, swaps, payments, uploads, notifications, facebook, community, reports, admin  # noqa: E402
 
 
 @asynccontextmanager
@@ -40,6 +40,8 @@ api_router.include_router(uploads.router)
 api_router.include_router(notifications.router)
 api_router.include_router(facebook.router)
 api_router.include_router(community.router)
+api_router.include_router(reports.router)
+api_router.include_router(admin.router)
 
 app.add_middleware(
     CORSMiddleware,

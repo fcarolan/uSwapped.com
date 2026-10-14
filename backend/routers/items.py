@@ -28,7 +28,7 @@ async def my_items(user: dict = Depends(get_current_user)):
 @router.get("/items/{id}", response_model=Item)
 async def get_item(id: str):
     doc = await db.items.find_one({"id": id}, {"_id": 0})
-    if not doc:
+    if not doc or doc.get("status") == "removed":
         raise HTTPException(status_code=404, detail="Item not found")
     return Item(**(await with_owner_ratings([doc]))[0])
 

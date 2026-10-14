@@ -71,3 +71,16 @@ Code is ready but DISABLED until FACEBOOK_APP_ID and FACEBOOK_APP_SECRET are set
 - Shipping labels (optional, sender pays): sizes small €5.00 / medium €8.00 / large €12.00 / xl €16.50 (base + €0.50 margin). POST /payments/label {swap_id, size, sender, recipient, origin_url} (confirmed swaps, one per side) → Stripe → label `paid`, tracking `DEMO-USW-XXXXXXXX` copied to swap {role}_tracking + {role}_label_id. GET /labels/{id}/pdf (owner only) = A6 PDF. **LABELS + TRACKING ARE MOCKED/DEMO** (lib/labels.py) until a carrier (Sendcloud/Shippo) is connected.
 - Payments: payment_transactions {session_id, user_id, kind swap_fee|label, swap_id, label_id, description, amount_cents, payment_status, fulfilled}. GET /payments/status/{session_id}, GET /payments/history, POST /stripe/webhook. Stripe products (setup_stripe.py): uswapped_processing_fee, uswapped_shipping_label, inline price_data. Old credit packs retired.
 - Pages: /pricing (fees + label prices; /credits aliases it). Dashboard tabs: Offers for me, My offers (Pay fee button + countdown), My listings, Saved searches, Payments.
+
+## Email + password auth (added alongside Google/Facebook)
+- POST /auth/register {name, email, password ≥8} → bcrypt hash, sets session cookie, email_verified=false. 409 if the email exists.
+- POST /auth/login {email, password} → 401 wrong creds, 403 suspended, 429 after 5 failures for 15 min (login_attempts).
+- If an unverified password account later signs in with Google/Facebook (email proven), the unverified password is dropped (stops account takeover).
+- Suspended users: sessions deleted and _user_from_request returns None (signed out everywhere); open swaps cancelled.
+- User has role "user"|"admin". password_hash is never returned.
+
+## Admin portal (/admin, role=admin only; API /api/admin/* uses require_admin → 401/403)
+- Tabs: Overview (stats), Reports (dismiss / remove listing), Listings (search/filter, remove with reason → owner notified, restore), Users (suspend/unsuspend, make/revoke admin, remove all listings, permanent delete with "DELETE" prompt; can't act on yourself), Swaps (filter, cancel open swaps), Transactions (Stripe refunds for real paid payments), Audit log (every admin write, admin_audit).
+- Item status "removed" = hidden from Browse and 404 on /items/{id}; removing cancels open swaps and frees reserved items.
+- Reports: POST /reports {item_id, reason prohibited|scam|misleading|offensive|other, details} — signed-in non-owners, one open report per item per user. "Report this listing" on item detail.
+- First admin seeded by seed.py from ADMIN_EMAIL / ADMIN_PASSWORD in backend/.env.

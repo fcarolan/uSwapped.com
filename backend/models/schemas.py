@@ -1,6 +1,6 @@
 """Pydantic models — mirrored by hand in frontend/src/lib/types.ts. Keep both in sync."""
 from typing import List, Literal, Optional
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, EmailStr, Field, computed_field
 
 from lib.fees import processing_fee_cents
 
@@ -9,9 +9,12 @@ Category = Literal[
     "Toys & Games", "Sports & Outdoors", "Collectibles", "Other",
 ]
 Condition = Literal["New", "Like new", "Good", "Fair"]
-ItemStatus = Literal["available", "reserved", "swapped"]  # reserved = accepted, waiting for the fee
+ItemStatus = Literal["available", "reserved", "swapped", "removed"]  # reserved = accepted, waiting for the fee
 # accepted = fee paid, swap confirmed
 SwapStatus = Literal["pending", "awaiting_payment", "accepted", "declined", "cancelled", "expired"]
+
+
+Role = Literal["user", "admin"]
 
 
 class User(BaseModel):
@@ -19,7 +22,19 @@ class User(BaseModel):
     email: str
     name: str
     picture: Optional[str] = None
+    role: Role = "user"
     created_at: str
+
+
+class RegisterBody(BaseModel):
+    name: str = Field(min_length=2, max_length=60)
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+
+
+class LoginBody(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=1, max_length=128)
 
 
 class SessionExchange(BaseModel):
@@ -290,3 +305,102 @@ class PaymentRecord(BaseModel):
     amount_cents: int
     payment_status: str
     created_at: str
+
+
+# ---------- reports ----------
+ReportReason = Literal["prohibited", "scam", "misleading", "offensive", "other"]
+
+
+class ReportCreate(BaseModel):
+    item_id: str
+    reason: ReportReason
+    details: str = Field(default="", max_length=500)
+
+
+class Report(BaseModel):
+    id: str
+    item_id: str
+    item_title: str
+    item_image_url: str
+    item_owner_id: str
+    item_owner_name: str
+    reporter_id: str
+    reporter_name: str
+    reason: ReportReason
+    details: str = ""
+    status: Literal["open", "dismissed", "item_removed"] = "open"
+    resolved_by: Optional[str] = None
+    resolved_at: Optional[str] = None
+    created_at: str
+
+
+# ---------- admin ----------
+class AdminStats(BaseModel):
+    users: int
+    suspended_users: int
+    items_available: int
+    items_removed: int
+    swaps_by_status: dict
+    open_reports: int
+    revenue_cents: int
+    refunded_cents: int
+
+
+class AdminUser(BaseModel):
+    user_id: str
+    email: str
+    name: str
+    picture: Optional[str] = None
+    role: Role = "user"
+    suspended: bool = False
+    auth: str  # "password" | "google" | "facebook"
+    listings: int = 0
+    swaps: int = 0
+    rating_avg: Optional[float] = None
+    rating_count: int = 0
+    created_at: str
+
+
+class SuspendBody(BaseModel):
+    suspended: bool
+
+
+class RoleBody(BaseModel):
+    role: Role
+
+
+class RemoveItemBody(BaseModel):
+    reason: str = Field(default="Breaks USwapped listing rules", max_length=200)
+
+
+class ReportResolve(BaseModel):
+    action: Literal["dismiss", "remove_item"]
+
+
+class AdminTransaction(BaseModel):
+    session_id: str
+    user_id: str
+    user_name: Optional[str] = None
+    user_email: Optional[str] = None
+    kind: PaymentKind
+    description: str
+    amount_cents: int
+    payment_status: str
+    swap_id: str
+    refundable: bool = False
+    created_at: str
+
+
+class AuditEntry(BaseModel):
+    id: str
+    admin_id: str
+    admin_name: str
+    action: str
+    target: str
+    detail: str = ""
+    created_at: str
+
+
+class AdminActionResult(BaseModel):
+    ok: bool = True
+    detail: str = ""

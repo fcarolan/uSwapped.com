@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { apiDelete, apiGet, apiPost } from "@/lib/api";
 import type { Item, Swap, SwapCreate } from "@/lib/types";
-import { errorMessage, startGoogleLogin, useMe } from "@/lib/hooks";
+import { errorMessage, useMe } from "@/lib/hooks";
+import ReportDialog from "@/components/ReportDialog";
 import { eur, euro } from "@/lib/fees";
 import { cn } from "@/lib/utils";
 import { RatingInline, TrustBadge, isTrusted } from "@/components/Trust";
@@ -236,7 +237,7 @@ export default function ItemDetail() {
 
             {item.status === "available" &&
               (!me ? (
-                <Button data-testid="item-signin-to-swap" onClick={startGoogleLogin} className="brutal brutal-hover h-14 w-full rounded-full text-base font-bold">
+                <Button data-testid="item-signin-to-swap" onClick={() => navigate(`/login?next=/items/${item.id}`)} className="brutal brutal-hover h-14 w-full rounded-full text-base font-bold">
                   Sign in to propose a swap
                 </Button>
               ) : me.user_id === item.owner_id ? (
@@ -259,6 +260,7 @@ export default function ItemDetail() {
             <p className="flex items-start gap-2 text-xs text-slate-500">
               <Truck className="size-4 shrink-0" /> Postage &amp; packaging is paid by each sender when swapping.
             </p>
+            {me && me.user_id !== item.owner_id && <ReportDialog itemId={item.id} />}
           </div>
         </div>
       )}

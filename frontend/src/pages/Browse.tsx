@@ -6,7 +6,7 @@ import { BellPlus, MapPin, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { apiGet, apiPost } from "@/lib/api";
 import { CATEGORIES, type Category, type Item, type SavedSearch, type SavedSearchCreate } from "@/lib/types";
-import { errorMessage, startGoogleLogin, useMe } from "@/lib/hooks";
+import { errorMessage, useMe } from "@/lib/hooks";
 import ItemCard, { ItemCardSkeleton } from "@/components/ItemCard";
 import FeeCalculator from "@/components/FeeCalculator";
 import { cn } from "@/lib/utils";
@@ -144,7 +144,7 @@ export default function Browse() {
             disabled={save.isPending}
             onClick={() => {
               if (!me) {
-                toast("Sign in to save searches and get alerts", { action: { label: "Sign in", onClick: startGoogleLogin } });
+                toast("Sign in to save searches and get alerts", { action: { label: "Sign in", onClick: () => window.location.assign("/login?next=/browse") } });
                 return;
               }
               save.mutate({ q, category: (category || null) as Category | null, location });

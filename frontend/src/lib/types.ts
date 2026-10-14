@@ -15,7 +15,7 @@ export type Category = (typeof CATEGORIES)[number];
 export const CONDITIONS = ["New", "Like new", "Good", "Fair"] as const;
 export type Condition = (typeof CONDITIONS)[number];
 
-export type ItemStatus = "available" | "reserved" | "swapped"; // reserved = accepted, waiting for the fee
+export type ItemStatus = "available" | "reserved" | "swapped" | "removed"; // reserved = accepted, waiting for the fee
 // accepted = fee paid, swap confirmed
 export type SwapStatus = "pending" | "awaiting_payment" | "accepted" | "declined" | "cancelled" | "expired";
 
@@ -24,7 +24,21 @@ export interface User {
   email: string;
   name: string;
   picture: string | null;
+  role: Role;
   created_at: string;
+}
+
+export type Role = "user" | "admin";
+
+export interface RegisterBody {
+  name: string;
+  email: string;
+  password: string;
+}
+
+export interface LoginBody {
+  email: string;
+  password: string;
 }
 
 export interface ItemBase {
@@ -277,4 +291,102 @@ export interface Message {
 export interface MobileSession {
   user: User;
   session_token: string;
+}
+
+// ---------- reports ----------
+export type ReportReason = "prohibited" | "scam" | "misleading" | "offensive" | "other";
+
+export interface ReportCreate {
+  item_id: string;
+  reason: ReportReason;
+  details: string;
+}
+
+export interface Report {
+  id: string;
+  item_id: string;
+  item_title: string;
+  item_image_url: string;
+  item_owner_id: string;
+  item_owner_name: string;
+  reporter_id: string;
+  reporter_name: string;
+  reason: ReportReason;
+  details: string;
+  status: "open" | "dismissed" | "item_removed";
+  resolved_by: string | null;
+  resolved_at: string | null;
+  created_at: string;
+}
+
+// ---------- admin ----------
+export interface AdminStats {
+  users: number;
+  suspended_users: number;
+  items_available: number;
+  items_removed: number;
+  swaps_by_status: Record<string, number>;
+  open_reports: number;
+  revenue_cents: number;
+  refunded_cents: number;
+}
+
+export interface AdminUser {
+  user_id: string;
+  email: string;
+  name: string;
+  picture: string | null;
+  role: Role;
+  suspended: boolean;
+  auth: "password" | "google" | "facebook";
+  listings: number;
+  swaps: number;
+  rating_avg: number | null;
+  rating_count: number;
+  created_at: string;
+}
+
+export interface SuspendBody {
+  suspended: boolean;
+}
+
+export interface RoleBody {
+  role: Role;
+}
+
+export interface RemoveItemBody {
+  reason: string;
+}
+
+export interface ReportResolve {
+  action: "dismiss" | "remove_item";
+}
+
+export interface AdminTransaction {
+  session_id: string;
+  user_id: string;
+  user_name: string | null;
+  user_email: string | null;
+  kind: PaymentKind;
+  description: string;
+  amount_cents: number;
+  payment_status: string;
+  swap_id: string;
+  refundable: boolean;
+  created_at: string;
+}
+
+export interface AuditEntry {
+  id: string;
+  admin_id: string;
+  admin_name: string;
+  action: string;
+  target: string;
+  detail: string;
+  created_at: string;
+}
+
+export interface AdminActionResult {
+  ok: boolean;
+  detail: string;
 }

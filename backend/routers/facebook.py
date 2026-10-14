@@ -94,13 +94,19 @@ async def _fetch_profile(request: Request, code: str, app_id: str, secret: str) 
 
 async def _upsert_user(profile: dict) -> str:
     """Links Facebook to an existing account with the same email, or creates one. Returns user_id."""
-    user = await db.users.find_one({"email": profile["email"]}, {"_id": 0, "user_id": 1})
+    user = await db.users.find_one({"email": profile["email"]}, {"_id": 0})
+    if user and user.get("suspended"):
+        raise _FacebookError("suspended")
     if user:
-        await db.users.update_one({"user_id": user["user_id"]}, {"$set": {"facebook_id": profile["id"]}})
+        update: dict = {"$set": {"facebook_id": profile["id"], "email_verified": True}}
+        if user.get("password_hash") and not user.get("email_verified"):
+            update["$unset"] = {"password_hash": ""}  # Facebook verified the email; drop unverified password
+        await db.users.update_one({"user_id": user["user_id"]}, update)
         return user["user_id"]
     user_id = f"user_{uuid.uuid4().hex[:12]}"
     await db.users.insert_one({"user_id": user_id, "email": profile["email"], "name": profile["name"],
-                               "picture": profile["picture"], "facebook_id": profile["id"], "created_at": now_iso()})
+                               "picture": profile["picture"], "facebook_id": profile["id"], "role": "user",
+                               "email_verified": True, "created_at": now_iso()})
     return user_id
 
 
@@ -124,6 +130,7 @@ async def facebook_callback(request: Request):
             raise _FacebookError("facebook_denied")
         code = _validate_callback(request)
         profile = await _fetch_profile(request, code, app_id, secret)
+        user_id = await _upsert_user(profile)
     except _FacebookError as e:
         return RedirectResponse(f"/login?error={e.reason}", status_code=302)
-    return await _session_redirect(await _upsert_user(profile))
+    return await _session_redirect(user_id)

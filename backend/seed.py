@@ -78,6 +78,18 @@ async def main():
         rs = await db.ratings.find({"ratee_id": u["user_id"]}, {"stars": 1}).to_list(1000)
         await db.users.update_one({"user_id": u["user_id"]},
                                   {"$set": {"rating_sum": sum(r["stars"] for r in rs), "rating_count": len(rs)}})
+    # First admin (email + password from backend/.env). Re-running resets the password to ADMIN_PASSWORD.
+    admin_email = os.environ.get("ADMIN_EMAIL", "").strip().lower()
+    admin_password = os.environ.get("ADMIN_PASSWORD", "")
+    if admin_email and admin_password:
+        from lib.passwords import hash_password
+        await db.users.update_one({"email": admin_email}, {
+            "$set": {"role": "admin", "password_hash": hash_password(admin_password), "email_verified": True,
+                     "suspended": False},
+            "$setOnInsert": {"user_id": f"user_{uuid.uuid4().hex[:12]}", "email": admin_email, "name": "USwapped Admin",
+                             "picture": None, "created_at": now.isoformat()},
+        }, upsert=True)
+        print("admin ready:", admin_email)
     if TEST_TOKEN:
         await db.user_sessions.update_one(
             {"session_token": TEST_TOKEN},
