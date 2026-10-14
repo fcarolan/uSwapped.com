@@ -1,9 +1,10 @@
 """Idempotent seed: demo swappers + listings + a test user/session. Run: python seed.py"""
 import asyncio
+import os
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from lib.db import db, ensure_indexes
+from lib.db import db, ensure_indexes  # also loads backend/.env
 
 U = "https://images.unsplash.com/"
 DEMO_USERS = [
@@ -16,7 +17,9 @@ DEMO_USERS = [
 ]
 TEST_USER = {"user_id": "user_test_swapper", "email": "test.swapper@uswapped.com", "name": "Test Swapper",
              "picture": "https://api.dicebear.com/7.x/thumbs/svg?seed=test"}
-TEST_TOKEN = "test_session_uswapped"
+# Test-only login. Set SEED_TEST_SESSION_TOKEN in backend/.env for preview/testing; leave it unset in
+# production so no known session token is ever seeded.
+TEST_TOKEN = os.environ.get("SEED_TEST_SESSION_TOKEN", "").strip()
 
 ITEMS = [
     ("seed-camera", 0, "Vintage Rangefinder Camera", "Fully working 35mm rangefinder with leather strap. Shutter fires at all speeds.", "Electronics", "Good", 140, U + "26/camera-keys.jpg?w=900&q=80", "Dublin"),
@@ -75,12 +78,15 @@ async def main():
         rs = await db.ratings.find({"ratee_id": u["user_id"]}, {"stars": 1}).to_list(1000)
         await db.users.update_one({"user_id": u["user_id"]},
                                   {"$set": {"rating_sum": sum(r["stars"] for r in rs), "rating_count": len(rs)}})
-    await db.user_sessions.update_one(
-        {"session_token": TEST_TOKEN},
-        {"$set": {"user_id": TEST_USER["user_id"], "session_token": TEST_TOKEN,
-                  "expires_at": now + timedelta(days=365), "created_at": now.isoformat()}},
-        upsert=True,
-    )
+    if TEST_TOKEN:
+        await db.user_sessions.update_one(
+            {"session_token": TEST_TOKEN},
+            {"$set": {"user_id": TEST_USER["user_id"], "session_token": TEST_TOKEN,
+                      "expires_at": now + timedelta(days=30), "created_at": now.isoformat()}},
+            upsert=True,
+        )
+    else:
+        print("SEED_TEST_SESSION_TOKEN not set: skipping test session")
     print("seeded", await db.items.count_documents({}), "items")
 
 

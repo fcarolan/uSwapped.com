@@ -57,6 +57,9 @@ function NavItems({ onClick }: { onClick?: () => void }) {
   );
 }
 
+// keeps toasts above the mobile tab bar; hoisted so the prop is referentially stable
+const TOAST_MOBILE_OFFSET = { bottom: 88 };
+
 function Header() {
   const { data: me } = useMe();
   return (
@@ -179,7 +182,7 @@ export default function Layout() {
       <Footer />
       <MobileTabBar />
       <InstallPrompt />
-      <Toaster richColors mobileOffset={{ bottom: 88 }} />
+      <Toaster richColors mobileOffset={TOAST_MOBILE_OFFSET} />
     </div>
   );
 }

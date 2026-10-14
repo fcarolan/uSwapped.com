@@ -53,44 +53,58 @@ async def facebook_login(request: Request):
     return resp
 
 
-@router.get("/facebook/callback")
-async def facebook_callback(request: Request):
-    app_id, secret = _cfg()
-    fail = lambda reason: RedirectResponse(f"/login?error={reason}", status_code=302)  # noqa: E731
-    if request.query_params.get("error") or not (app_id and secret):
-        return fail("facebook_denied")
+class _FacebookError(Exception):
+    def __init__(self, reason: str):
+        super().__init__(reason)
+        self.reason = reason
+
+
+def _validate_callback(request: Request) -> str:
+    """Checks the OAuth response + CSRF state; returns the authorization code."""
+    if request.query_params.get("error"):
+        raise _FacebookError("facebook_denied")
     code, state = request.query_params.get("code"), request.query_params.get("state")
     saved = request.cookies.get("facebook_oauth_state")
-    if not code or not state or not saved or not hmac.compare_digest(state, saved):
-        return fail("facebook_state")
+    if not (code and state and saved and hmac.compare_digest(state, saved)):
+        raise _FacebookError("facebook_state")
+    return code
 
+
+async def _fetch_profile(request: Request, code: str, app_id: str, secret: str) -> dict:
+    """Exchanges the code for a token and returns {id, email, name, picture}."""
     graph = f"https://graph.facebook.com/{GRAPH_VERSION}"
     async with httpx.AsyncClient(timeout=10) as http:
         tr = await http.get(f"{graph}/oauth/access_token", params={
             "client_id": app_id, "client_secret": secret, "redirect_uri": _redirect_uri(request), "code": code})
         token = tr.json().get("access_token") if tr.status_code == 200 else None
         if not token:
-            return fail("facebook_token")
+            raise _FacebookError("facebook_token")
         proof = hmac.new(secret.encode(), token.encode(), hashlib.sha256).hexdigest()
         pr = await http.get(f"{graph}/me", params={"fields": "id,name,email,picture.type(large)",
                                                    "access_token": token, "appsecret_proof": proof})
-        profile = pr.json() if pr.status_code == 200 else {}
+    raw = pr.json() if pr.status_code == 200 else {}
+    email = (raw.get("email") or "").strip().lower()
+    if not raw.get("id") or not email:
+        raise _FacebookError("facebook_email_required")
+    return {
+        "id": raw["id"], "email": email, "name": raw.get("name") or email.split("@")[0],
+        "picture": ((raw.get("picture") or {}).get("data") or {}).get("url"),
+    }
 
-    email = (profile.get("email") or "").strip().lower()
-    if not profile.get("id") or not email:
-        return fail("facebook_email_required")
-    picture = ((profile.get("picture") or {}).get("data") or {}).get("url")
-    name = profile.get("name") or email.split("@")[0]
 
-    user = await db.users.find_one({"email": email}, {"_id": 0})
+async def _upsert_user(profile: dict) -> str:
+    """Links Facebook to an existing account with the same email, or creates one. Returns user_id."""
+    user = await db.users.find_one({"email": profile["email"]}, {"_id": 0, "user_id": 1})
     if user:
         await db.users.update_one({"user_id": user["user_id"]}, {"$set": {"facebook_id": profile["id"]}})
-        user_id = user["user_id"]
-    else:
-        user_id = f"user_{uuid.uuid4().hex[:12]}"
-        await db.users.insert_one({"user_id": user_id, "email": email, "name": name, "picture": picture,
-                                   "facebook_id": profile["id"], "created_at": now_iso()})
+        return user["user_id"]
+    user_id = f"user_{uuid.uuid4().hex[:12]}"
+    await db.users.insert_one({"user_id": user_id, "email": profile["email"], "name": profile["name"],
+                               "picture": profile["picture"], "facebook_id": profile["id"], "created_at": now_iso()})
+    return user_id
 
+
+async def _session_redirect(user_id: str) -> RedirectResponse:
     session_token = secrets.token_urlsafe(32)
     await db.user_sessions.insert_one({"user_id": user_id, "session_token": session_token,
                                        "expires_at": datetime.now(timezone.utc) + timedelta(days=7),
@@ -100,3 +114,16 @@ async def facebook_callback(request: Request):
     resp.set_cookie("session_token", session_token, httponly=True, secure=True, samesite="none", path="/",
                     max_age=7 * 24 * 3600)
     return resp
+
+
+@router.get("/facebook/callback")
+async def facebook_callback(request: Request):
+    app_id, secret = _cfg()
+    try:
+        if not (app_id and secret):
+            raise _FacebookError("facebook_denied")
+        code = _validate_callback(request)
+        profile = await _fetch_profile(request, code, app_id, secret)
+    except _FacebookError as e:
+        return RedirectResponse(f"/login?error={e.reason}", status_code=302)
+    return await _session_redirect(await _upsert_user(profile))
