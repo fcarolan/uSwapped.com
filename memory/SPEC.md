@@ -13,14 +13,16 @@ Peer-to-peer item swapping marketplace. No cash between users; swaps are confirm
 ## Data model (Mongo)
 - users {user_id, email, name, picture, credits, created_at}
 - user_sessions {user_id, session_token, expires_at}
-- items {id, owner_id, owner_name, owner_picture, title, description, category, condition, value_eur, image_url, location, credit_cost, status available|swapped, created_at}
+- images {id, owner_id, content_type, data(Binary), size}
+- items {id, owner_id, owner_name, owner_picture, title, description, category, condition, value_eur, image_url (cover = images[0]), images[], location, credit_cost, status available|swapped, created_at}
 - swaps {id, proposer_id, owner_id, target_item{summary}, offered_item{summary}, proposer_cost, owner_cost, message, status pending|accepted|declined|cancelled}
 - credit_transactions {id, user_id, amount(+/-), reason, created_at}
 - payment_transactions {session_id, user_id, pack_id, credits, amount, status, payment_status, credited}
 
 ## API (/api)
 auth: POST /auth/session, GET /auth/me, POST /auth/logout
-items: GET /items?q=&category=, GET /items/mine, GET /items/{id}, POST /items, DELETE /items/{id}
+items: GET /items?q=&category=, GET /items/mine, GET /items/{id}, POST /items (images: 1–4 URLs from /uploads, must be owned by caller), DELETE /items/{id}
+uploads: POST /uploads (multipart `file`, jpeg/png/webp ≤3MB, auth) → {id,url:/api/images/{id}}; GET /images/{id} (public bytes)
 swaps: GET /swaps, POST /swaps, POST /swaps/{id}/accept|decline|cancel
 credits: GET /credits/packs, GET /credits/history, POST /payments/checkout {pack_id, origin_url}, GET /payments/status/{session_id}, POST /stripe/webhook
 
@@ -33,3 +35,9 @@ credits: GET /credits/packs, GET /credits/history, POST /payments/checkout {pack
 ## Seed (python backend/seed.py, idempotent)
 - Demo owners: user_demo_aoife, user_demo_luca, user_demo_sophie (50 credits each, no sessions). 10 listings (ids seed-camera, seed-typewriter, seed-sneakers, seed-headphones, seed-guitar, seed-vinyl, seed-console, seed-books, seed-bike, seed-jacket).
 - Test user user_test_swapper (50 credits) owns seed-test-lamp (€40 → 2 credits). See test_credentials.md.
+
+## Photos
+Create Listing uses PhotoUploader: pick/take up to 4 photos, resized client-side to max 1200px JPEG, uploaded to /api/uploads, first = cover. Item detail shows a thumbnail gallery. Seed items have only image_url (images=[]).
+
+## Mobile app (PWA)
+manifest.webmanifest + sw.js (offline fallback only, never caches /api) + icons (icon-192/512, apple-touch-icon). Mobile (<md): bottom tab bar (Home, Browse, List, Credits, Me) + dismissible install prompt (Android: native install button via beforeinstallprompt; iOS: "Share → Add to Home Screen" hint). Native App Store/Play app not built.

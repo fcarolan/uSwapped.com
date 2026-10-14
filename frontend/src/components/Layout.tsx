@@ -12,6 +12,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { useMe, startGoogleLogin } from "@/lib/hooks";
 import { endSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
+import { InstallPrompt, MobileTabBar } from "@/components/MobileChrome";
 
 export function Logo({ className }: { className?: string }) {
   return (
@@ -58,7 +59,7 @@ function NavItems({ onClick }: { onClick?: () => void }) {
 function Header() {
   const { data: me } = useMe();
   return (
-    <header className="sticky top-0 z-50 border-b-2 border-slate-900 bg-[#FAFAF7]/85 backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b-2 border-slate-900 bg-[#FAFAF7]/85 pt-[env(safe-area-inset-top)] backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6">
         <Logo />
         <nav className="ml-6 hidden items-center gap-1 md:flex">
@@ -175,13 +176,15 @@ function Footer() {
 
 export default function Layout() {
   return (
-    <div className="min-h-screen bg-[#FAFAF7]">
+    <div className="min-h-screen bg-[#FAFAF7] pb-[calc(64px+env(safe-area-inset-bottom))] md:pb-0">
       <Header />
       <main>
         <Outlet />
       </main>
       <Footer />
-      <Toaster richColors />
+      <MobileTabBar />
+      <InstallPrompt />
+      <Toaster richColors mobileOffset={{ bottom: 88 }} />
     </div>
   );
 }

@@ -24,18 +24,23 @@ class SessionExchange(BaseModel):
     session_id: str
 
 
-class ItemCreate(BaseModel):
+class ItemBase(BaseModel):
     title: str = Field(min_length=2, max_length=80)
     description: str = Field(min_length=5, max_length=1500)
     category: Category
     condition: Condition
     value_eur: float = Field(gt=0, le=100000)
-    image_url: str = Field(min_length=5)
     location: str = Field(min_length=2, max_length=60)
 
 
-class Item(ItemCreate):
+class ItemCreate(ItemBase):
+    images: List[str] = Field(min_length=1, max_length=4)  # URLs returned by POST /api/uploads
+
+
+class Item(ItemBase):
     id: str
+    image_url: str  # cover photo (= images[0])
+    images: List[str] = []
     owner_id: str
     owner_name: str
     owner_picture: Optional[str] = None
@@ -50,6 +55,11 @@ class ItemSummary(BaseModel):
     image_url: str
     value_eur: float
     credit_cost: int
+
+
+class UploadResult(BaseModel):
+    id: str
+    url: str
 
 
 class SwapCreate(BaseModel):

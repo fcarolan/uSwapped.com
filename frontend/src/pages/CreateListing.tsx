@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Coins, ImageIcon, Truck } from "lucide-react";
+import PhotoUploader from "@/components/PhotoUploader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,7 +25,7 @@ export default function CreateListing() {
   const [category, setCategory] = useState<Category | "">("");
   const [condition, setCondition] = useState<Condition | "">("");
   const [value, setValue] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
+  const [photos, setPhotos] = useState<string[]>([]);
   const [location, setLocation] = useState("");
   const credits = creditsForValue(Number(value));
 
@@ -42,13 +43,14 @@ export default function CreateListing() {
     e.preventDefault();
     if (!category || !condition) return toast.error("Pick a category and condition");
     if (!(Number(value) > 0)) return toast.error("Enter an estimated value");
+    if (photos.length === 0) return toast.error("Add at least one photo");
     create.mutate({
       title: title.trim(),
       description: description.trim(),
       category,
       condition,
       value_eur: Number(value),
-      image_url: imageUrl.trim(),
+      images: photos,
       location: location.trim(),
     });
   };
@@ -111,8 +113,8 @@ export default function CreateListing() {
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="img">Photo URL</Label>
-            <Input id="img" data-testid="listing-image-input" type="url" className={field} value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://…" required />
+            <Label>Photos</Label>
+            <PhotoUploader photos={photos} onChange={setPhotos} />
           </div>
           <Button type="submit" data-testid="listing-submit-button" disabled={create.isPending} className="brutal brutal-hover h-12 w-full rounded-full text-base font-bold">
             {create.isPending ? "Publishing…" : "Publish listing"}
@@ -122,7 +124,7 @@ export default function CreateListing() {
         <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
           <div className="brutal overflow-hidden rounded-2xl bg-white" data-testid="listing-preview">
             <div className="grid aspect-[4/3] place-items-center border-b-2 border-slate-900 bg-slate-100">
-              {imageUrl ? <img src={imageUrl} alt="" className="size-full object-cover" /> : <ImageIcon className="size-10 text-slate-400" />}
+              {photos[0] ? <img src={photos[0]} alt="" className="size-full object-cover" /> : <ImageIcon className="size-10 text-slate-400" />}
             </div>
             <div className="p-4">
               <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-700">{category || "Category"}</p>

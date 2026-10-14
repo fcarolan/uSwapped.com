@@ -129,6 +129,37 @@ function ProposeDialog({ target, myCredits }: { target: Item; myCredits: number 
   );
 }
 
+function Gallery({ item }: { item: Item }) {
+  const photos = item.images.length ? item.images : [item.image_url];
+  const [active, setActive] = useState(0);
+  const current = photos[Math.min(active, photos.length - 1)];
+  return (
+    <div className="space-y-3">
+      <div className="brutal overflow-hidden rounded-3xl bg-white">
+        <img key={current} src={current} alt={item.title} className="aspect-[4/3] w-full animate-in fade-in object-cover duration-300" data-testid="item-image" />
+      </div>
+      {photos.length > 1 && (
+        <div className="flex gap-3" data-testid="item-gallery-thumbs">
+          {photos.map((p, i) => (
+            <button
+              key={p}
+              type="button"
+              data-testid={`item-gallery-thumb-${i}`}
+              onClick={() => setActive(i)}
+              className={cn(
+                "size-20 overflow-hidden rounded-xl border-2 transition-[border-color,transform] duration-150 active:scale-95",
+                i === active ? "border-slate-900 shadow-[3px_3px_0_#0f172a]" : "border-slate-300 opacity-70 hover:opacity-100",
+              )}
+            >
+              <img src={p} alt="" className="size-full object-cover" />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ItemDetail() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
@@ -160,9 +191,7 @@ export default function ItemDetail() {
       )}
       {item && !isError && (
         <div className="mt-6 grid gap-10 lg:grid-cols-[1.25fr_1fr]">
-          <div className="brutal overflow-hidden rounded-3xl bg-white">
-            <img src={item.image_url} alt={item.title} className="aspect-[4/3] w-full object-cover" data-testid="item-image" />
-          </div>
+          <Gallery item={item} />
           <div className="space-y-6">
             <div>
               <div className="flex flex-wrap items-center gap-2">

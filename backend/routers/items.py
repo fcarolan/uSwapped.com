@@ -40,8 +40,14 @@ async def get_item(id: str):
 
 @router.post("/items", response_model=Item)
 async def create_item(body: ItemCreate, user: dict = Depends(get_current_user)):
+    for url in body.images:
+        if not url.startswith("/api/images/"):
+            raise HTTPException(status_code=400, detail="Please upload your photos")
+        img = await db.images.find_one({"id": url.rsplit("/", 1)[-1]}, {"_id": 0, "owner_id": 1})
+        if not img or img["owner_id"] != user["user_id"]:
+            raise HTTPException(status_code=400, detail="One of the photos could not be found, please re-upload it")
     item = Item(
-        **body.model_dump(), id=str(uuid.uuid4()), owner_id=user["user_id"], owner_name=user["name"],
+        **body.model_dump(), image_url=body.images[0], id=str(uuid.uuid4()), owner_id=user["user_id"], owner_name=user["name"],
         owner_picture=user.get("picture"), credit_cost=credits_for_value(body.value_eur), created_at=now_iso(),
     )
     await db.items.insert_one(item.model_dump())

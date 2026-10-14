@@ -27,18 +27,23 @@ export interface User {
   created_at: string;
 }
 
-export interface ItemCreate {
+export interface ItemBase {
   title: string;
   description: string;
   category: Category;
   condition: Condition;
   value_eur: number;
-  image_url: string;
   location: string;
 }
 
-export interface Item extends ItemCreate {
+export interface ItemCreate extends ItemBase {
+  images: string[]; // URLs from POST /api/uploads
+}
+
+export interface Item extends ItemBase {
   id: string;
+  image_url: string; // cover = images[0]
+  images: string[];
   owner_id: string;
   owner_name: string;
   owner_picture: string | null;
@@ -96,6 +101,11 @@ export interface CreditTx {
   amount: number;
   reason: string;
   created_at: string;
+}
+
+export interface UploadResult {
+  id: string;
+  url: string;
 }
 
 export interface CheckoutResponse {
