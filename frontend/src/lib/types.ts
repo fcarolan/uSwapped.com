@@ -119,3 +119,49 @@ export interface PaymentStatus {
   payment_status: string;
   credits: number;
 }
+
+export interface AuthProviders {
+  google: boolean;
+  facebook: boolean;
+}
+
+export type NotificationKind = "swap_offer" | "swap_accepted" | "swap_declined" | "message";
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  kind: NotificationKind;
+  title: string;
+  body: string;
+  link: string;
+  read: boolean;
+  created_at: string;
+}
+
+export interface NotificationList {
+  items: Notification[];
+  unread: number;
+}
+
+export interface PushKey {
+  public_key: string;
+}
+
+export interface MessageCreate {
+  body: string;
+}
+
+export interface Message {
+  id: string;
+  swap_id: string;
+  sender_id: string;
+  sender_name: string;
+  body: string;
+  created_at: string;
+}
+
+// Used only by native (Expo) clients via POST /api/auth/mobile-session.
+export interface MobileSession {
+  user: User;
+  session_token: string;
+}

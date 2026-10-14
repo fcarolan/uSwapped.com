@@ -7,16 +7,15 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from lib.auth import get_current_user, now_iso
 from lib.credits import SIGNUP_BONUS
 from lib.db import db
-from models.schemas import SessionExchange, User
+from models.schemas import MobileSession, SessionExchange, User
 
 router = APIRouter(prefix="/auth")
 SESSION_DATA_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
 
 
-@router.post("/session", response_model=User)
-async def exchange_session(body: SessionExchange, response: Response):
+async def _exchange(session_id: str) -> tuple[dict, str]:
     async with httpx.AsyncClient(timeout=15) as http:
-        r = await http.get(SESSION_DATA_URL, headers={"X-Session-ID": body.session_id})
+        r = await http.get(SESSION_DATA_URL, headers={"X-Session-ID": session_id})
     if r.status_code != 200:
         raise HTTPException(status_code=401, detail="Invalid session")
     data = r.json()
@@ -41,9 +40,23 @@ async def exchange_session(body: SessionExchange, response: Response):
         "user_id": user["user_id"], "session_token": data["session_token"],
         "expires_at": datetime.now(timezone.utc) + timedelta(days=7), "created_at": now_iso(),
     })
-    response.set_cookie("session_token", data["session_token"], httponly=True, secure=True,
+    return user, data["session_token"]
+
+
+@router.post("/session", response_model=User)
+async def exchange_session(body: SessionExchange, response: Response):
+    user, token = await _exchange(body.session_id)
+    response.set_cookie("session_token", token, httponly=True, secure=True,
                         samesite="none", path="/", max_age=7 * 24 * 3600)
     return User(**user)
+
+
+# Native (Expo) clients can't use httpOnly cookies: they store the token in secure storage and send it as
+# "Authorization: Bearer <token>". Web clients must keep using /auth/session.
+@router.post("/mobile-session", response_model=MobileSession)
+async def exchange_mobile_session(body: SessionExchange):
+    user, token = await _exchange(body.session_id)
+    return MobileSession(user=User(**user), session_token=token)
 
 
 @router.get("/me", response_model=User)

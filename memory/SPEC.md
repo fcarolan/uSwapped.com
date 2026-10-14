@@ -20,10 +20,12 @@ Peer-to-peer item swapping marketplace. No cash between users; swaps are confirm
 - payment_transactions {session_id, user_id, pack_id, credits, amount, status, payment_status, credited}
 
 ## API (/api)
-auth: POST /auth/session, GET /auth/me, POST /auth/logout
+auth: POST /auth/session (web, sets cookie), POST /auth/mobile-session (native: returns {user, session_token}), GET /auth/me, POST /auth/logout, GET /auth/providers {google, facebook}, GET /auth/facebook/login → Facebook → GET /auth/facebook/callback (sets cookie, redirects /dashboard)
 items: GET /items?q=&category=, GET /items/mine, GET /items/{id}, POST /items (images: 1–4 URLs from /uploads, must be owned by caller), DELETE /items/{id}
 uploads: POST /uploads (multipart `file`, jpeg/png/webp ≤3MB, auth) → {id,url:/api/images/{id}}; GET /images/{id} (public bytes)
-swaps: GET /swaps, POST /swaps, POST /swaps/{id}/accept|decline|cancel
+swaps: GET /swaps, POST /swaps, GET /swaps/{id} (parties only), POST /swaps/{id}/accept|decline|cancel, GET|POST /swaps/{id}/messages (parties only; POST only when accepted)
+notifications: GET /notifications {items, unread}, POST /notifications/read-all, POST /notifications/{id}/read
+push: GET /push/public-key, POST /push/subscribe {endpoint, keys{p256dh,auth}}, POST /push/unsubscribe {endpoint}
 credits: GET /credits/packs, GET /credits/history, POST /payments/checkout {pack_id, origin_url}, GET /payments/status/{session_id}, POST /stripe/webhook
 
 ## Flows
@@ -41,3 +43,11 @@ Create Listing uses PhotoUploader: pick/take up to 4 photos, resized client-side
 
 ## Mobile app (PWA)
 manifest.webmanifest + sw.js (offline fallback only, never caches /api) + icons (icon-192/512, apple-touch-icon). Mobile (<md): bottom tab bar (Home, Browse, List, Credits, Me) + dismissible install prompt (Android: native install button via beforeinstallprompt; iOS: "Share → Add to Home Screen" hint). Native App Store/Play app not built.
+
+## Chat + notifications
+- Chat page /swaps/:id/chat (accepted swaps only, both parties; polls every 4s; quick replies). "Chat" button on accepted swaps in dashboard.
+- Notifications created on: new offer (→ owner), accepted (→ proposer, links to chat), declined (→ proposer), new message (→ other party). Bell in header polls every 20s, popover list, mark read, "Turn on phone alerts".
+- Web Push via VAPID (pywebpush; keys VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY in backend/.env). Service worker shows the notification and opens the link on tap. iPhone requires iOS 16.4+ and the app added to Home Screen.
+
+## Facebook login
+Code is ready but DISABLED until FACEBOOK_APP_ID and FACEBOOK_APP_SECRET are set in backend/.env (then restart backend). Redirect URI to register in Meta: https://<public-host>/api/auth/facebook/callback (override with FACEBOOK_REDIRECT_URI). Login button reads /auth/providers.

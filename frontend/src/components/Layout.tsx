@@ -13,6 +13,7 @@ import { useMe, startGoogleLogin } from "@/lib/hooks";
 import { endSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { InstallPrompt, MobileTabBar } from "@/components/MobileChrome";
+import NotificationBell from "@/components/NotificationBell";
 
 export function Logo({ className }: { className?: string }) {
   return (
@@ -82,6 +83,7 @@ function Header() {
               >
                 <Plus className="size-4" /> List item
               </Link>
+              <NotificationBell />
               <DropdownMenu>
                 <DropdownMenuTrigger
                   data-testid="user-menu-trigger"

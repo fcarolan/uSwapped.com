@@ -24,6 +24,11 @@ class SessionExchange(BaseModel):
     session_id: str
 
 
+class MobileSession(BaseModel):
+    user: User
+    session_token: str
+
+
 class ItemBase(BaseModel):
     title: str = Field(min_length=2, max_length=80)
     description: str = Field(min_length=5, max_length=1500)
@@ -60,6 +65,61 @@ class ItemSummary(BaseModel):
 class UploadResult(BaseModel):
     id: str
     url: str
+
+
+class AuthProviders(BaseModel):
+    google: bool
+    facebook: bool
+
+
+NotificationKind = Literal["swap_offer", "swap_accepted", "swap_declined", "message"]
+
+
+class Notification(BaseModel):
+    id: str
+    user_id: str
+    kind: NotificationKind
+    title: str
+    body: str
+    link: str
+    read: bool = False
+    created_at: str
+
+
+class NotificationList(BaseModel):
+    items: List[Notification]
+    unread: int
+
+
+class PushKeys(BaseModel):
+    p256dh: str
+    auth: str
+
+
+class PushSubscription(BaseModel):
+    endpoint: str = Field(min_length=10)
+    keys: PushKeys
+
+
+class PushUnsubscribe(BaseModel):
+    endpoint: str
+
+
+class PushKey(BaseModel):
+    public_key: str
+
+
+class MessageCreate(BaseModel):
+    body: str = Field(min_length=1, max_length=1000)
+
+
+class Message(BaseModel):
+    id: str
+    swap_id: str
+    sender_id: str
+    sender_name: str
+    body: str
+    created_at: str
 
 
 class SwapCreate(BaseModel):

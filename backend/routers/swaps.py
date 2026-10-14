@@ -4,7 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from lib.auth import get_current_user, now_iso
 from lib.db import db
-from models.schemas import ItemSummary, Swap, SwapCreate, SwapLists
+from lib.notify import notify
+from models.schemas import ItemSummary, Message, MessageCreate, Swap, SwapCreate, SwapLists
+from typing import List
 
 router = APIRouter(prefix="/swaps")
 
@@ -62,6 +64,8 @@ async def propose(body: SwapCreate, user: dict = Depends(get_current_user)):
         message=body.message, created_at=now_iso(),
     )
     await db.swaps.insert_one(swap.model_dump(exclude={"counterpart_email"}))
+    await notify(swap.owner_id, "swap_offer", "New swap offer!",
+                 f"{user['name']} offered {offered['title']} for your {target['title']}", "/dashboard?tab=incoming")
     return swap
 
 
@@ -111,6 +115,9 @@ async def accept(id: str, user: dict = Depends(get_current_user)):
          "$or": [{"target_item.id": {"$in": item_ids}}, {"offered_item.id": {"$in": item_ids}}]},
         {"$set": {"status": "cancelled"}},
     )
+    await notify(doc["proposer_id"], "swap_accepted", "Swap accepted! 🎉",
+                 f"{user['name']} accepted your offer for {doc['target_item']['title']}. Say hi and arrange postage.",
+                 f"/swaps/{id}/chat")
     return await _to_swap(await db.swaps.find_one({"id": id}, {"_id": 0}), user["user_id"])
 
 
@@ -120,6 +127,8 @@ async def decline(id: str, user: dict = Depends(get_current_user)):
     if doc["owner_id"] != user["user_id"]:
         raise HTTPException(status_code=403, detail="Only the item owner can decline")
     await db.swaps.update_one({"id": id}, {"$set": {"status": "declined"}})
+    await notify(doc["proposer_id"], "swap_declined", "Offer declined",
+                 f"Your offer for {doc['target_item']['title']} wasn't accepted this time.", "/dashboard?tab=outgoing")
     doc["status"] = "declined"
     return Swap(**doc)
 
@@ -132,3 +141,38 @@ async def cancel(id: str, user: dict = Depends(get_current_user)):
     await db.swaps.update_one({"id": id}, {"$set": {"status": "cancelled"}})
     doc["status"] = "cancelled"
     return Swap(**doc)
+
+
+async def _party_swap(id: str, user: dict) -> dict:
+    doc = await db.swaps.find_one({"id": id}, {"_id": 0})
+    if not doc or user["user_id"] not in (doc["proposer_id"], doc["owner_id"]):
+        raise HTTPException(status_code=404, detail="Swap not found")
+    return doc
+
+
+@router.get("/{id}", response_model=Swap)
+async def get_swap(id: str, user: dict = Depends(get_current_user)):
+    return await _to_swap(await _party_swap(id, user), user["user_id"])
+
+
+@router.get("/{id}/messages", response_model=List[Message])
+async def list_messages(id: str, user: dict = Depends(get_current_user)):
+    await _party_swap(id, user)
+    docs = await db.messages.find({"swap_id": id}, {"_id": 0}).sort("created_at", 1).to_list(1000)
+    return [Message(**d) for d in docs]
+
+
+@router.post("/{id}/messages", response_model=Message)
+async def send_message(id: str, body: MessageCreate, user: dict = Depends(get_current_user)):
+    doc = await _party_swap(id, user)
+    if doc["status"] != "accepted":
+        raise HTTPException(status_code=400, detail="Chat opens once the swap is accepted")
+    text = body.body.strip()
+    if not text:
+        raise HTTPException(status_code=422, detail="Message can't be empty")
+    msg = Message(id=str(uuid.uuid4()), swap_id=id, sender_id=user["user_id"], sender_name=user["name"],
+                  body=text, created_at=now_iso())
+    await db.messages.insert_one(msg.model_dump())
+    other = doc["owner_id"] if user["user_id"] == doc["proposer_id"] else doc["proposer_id"]
+    await notify(other, "message", f"Message from {user['name'].split(' ')[0]}", text[:120], f"/swaps/{id}/chat")
+    return msg

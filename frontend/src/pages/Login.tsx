@@ -1,4 +1,7 @@
 import { Link, useSearchParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { apiGet } from "@/lib/api";
+import type { AuthProviders } from "@/lib/types";
 import { ArrowLeftRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { startGoogleLogin } from "@/lib/hooks";
@@ -6,6 +9,8 @@ import { SiFacebook, SiGoogle } from "@icons-pack/react-simple-icons";
 
 export default function Login() {
   const [params] = useSearchParams();
+  const { data: providers } = useQuery({ queryKey: ["auth-providers"], queryFn: () => apiGet<AuthProviders>("/auth/providers") });
+  const facebookOn = providers?.facebook === true;
   return (
     <div className="mx-auto grid max-w-5xl gap-10 px-6 py-16 md:grid-cols-2 md:items-center">
       <div>
@@ -35,10 +40,11 @@ export default function Login() {
         </Button>
         <Button
           data-testid="login-facebook-button"
-          disabled
-          className="h-12 w-full rounded-full bg-[#1877F2] text-base font-bold text-white opacity-60"
+          disabled={!facebookOn}
+          onClick={() => window.location.assign("/api/auth/facebook/login")}
+          className={`h-12 w-full rounded-full bg-[#1877F2] text-base font-bold text-white hover:bg-[#166FE5] ${facebookOn ? "brutal brutal-hover" : "opacity-60"}`}
         >
-          <SiFacebook size={18} color="#fff" /> Facebook — coming soon
+          <SiFacebook size={18} color="#fff" /> {facebookOn ? "Continue with Facebook" : "Facebook — coming soon"}
         </Button>
         <p className="pt-2 text-center text-xs text-slate-500">
           By continuing you agree to swap kindly and post your items on time. <Link to="/how-it-works" className="underline">How it works</Link>

@@ -1,7 +1,7 @@
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeftRight, Check, Coins, Mail, Plus, X } from "lucide-react";
+import { ArrowLeftRight, Check, Coins, Mail, MessageCircle, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiGet, apiPost } from "@/lib/api";
@@ -73,6 +73,11 @@ function SwapRow({ swap, incoming }: { swap: Swap; incoming: boolean }) {
           <Button size="sm" variant="outline" data-testid={`swap-cancel-${swap.id}`} disabled={act.isPending} onClick={() => act.mutate("cancel")} className="rounded-full">
             Cancel
           </Button>
+        )}
+        {swap.status === "accepted" && (
+          <Link to={`/swaps/${swap.id}/chat`} data-testid={`swap-chat-${swap.id}`} className="brutal brutal-hover inline-flex items-center gap-1 rounded-full bg-emerald-400 px-3 py-1.5 text-xs font-bold text-slate-900">
+            <MessageCircle className="size-3.5" /> Chat
+          </Link>
         )}
         {swap.status === "accepted" && swap.counterpart_email && (
           <a href={`mailto:${swap.counterpart_email}`} data-testid={`swap-contact-${swap.id}`} className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1.5 text-xs font-bold text-white">
