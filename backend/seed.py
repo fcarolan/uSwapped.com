@@ -36,6 +36,19 @@ TEST_ITEMS = [
     ("seed-test-lamp", "Mid-century Desk Lamp", "Brass desk lamp with a new bulb.", "Home & Garden", "Like new", 40, U + "photo-1777869356086-b0351f541ae7?w=900&q=80", "Dublin"),
 ]
 
+# (ratee, rater name, stars, comment, item title) — demo reviews so "Trusted swapper" badges show up
+DEMO_RATINGS = [
+    ("user_demo_aoife", "Ciara Walsh", 5, "Camera arrived beautifully packed. Lovely swapper!", "Vintage Rangefinder Camera"),
+    ("user_demo_aoife", "Tom Keane", 5, "Super quick postage, exactly as described.", "Denim Jacket"),
+    ("user_demo_aoife", "Niamh Doyle", 4, "Great swap, slight delay but kept me updated.", "Board Game Bundle"),
+    ("user_demo_aoife", "Marco Bianchi", 5, "Would swap again!", "Vinyl Bundle"),
+    ("user_demo_luca", "Emma Fischer", 5, "Guitar was in perfect shape.", "Acoustic Guitar"),
+    ("user_demo_luca", "Sean Murphy", 4, "Good communication.", "Paperback Bundle"),
+    ("user_demo_sophie", "Lena Novak", 5, "So friendly and fast!", "Retro Console"),
+    ("user_demo_sophie", "Paddy Ryan", 5, "Item better than the photos.", "City Bike"),
+    ("user_demo_sophie", "Chloe Dubois", 5, "Perfect swap, thank you!", "Headphones"),
+]
+
 
 async def main():
     await ensure_indexes()
@@ -53,6 +66,16 @@ async def main():
             "image_url": img, "location": loc, "credit_cost": credits_for_value(value), "status": "available",
             "created_at": (now - timedelta(hours=i)).isoformat(),
         })
+    for i, (ratee, rater, stars, comment, title) in enumerate(DEMO_RATINGS):
+        await db.ratings.update_one({"id": f"seed-rating-{i}"}, {"$setOnInsert": {
+            "id": f"seed-rating-{i}", "swap_id": f"seed-swap-{i}", "rater_id": f"seed-rater-{i}", "rater_name": rater,
+            "rater_picture": None, "ratee_id": ratee, "stars": stars, "comment": comment, "item_title": title,
+            "created_at": (now - timedelta(days=3 + i * 4)).isoformat(),
+        }}, upsert=True)
+    for u in DEMO_USERS + [TEST_USER]:  # recompute aggregates so re-running stays consistent
+        rs = await db.ratings.find({"ratee_id": u["user_id"]}, {"stars": 1}).to_list(1000)
+        await db.users.update_one({"user_id": u["user_id"]},
+                                  {"$set": {"rating_sum": sum(r["stars"] for r in rs), "rating_count": len(rs)}})
     await db.user_sessions.update_one(
         {"session_token": TEST_TOKEN},
         {"$set": {"user_id": TEST_USER["user_id"], "session_token": TEST_TOKEN,

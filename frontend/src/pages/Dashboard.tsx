@@ -1,11 +1,12 @@
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeftRight, Check, Coins, Mail, MessageCircle, Plus, X } from "lucide-react";
+import { ArrowLeftRight, Bell, Check, Coins, Mail, MessageCircle, Plus, Search, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { apiGet, apiPost } from "@/lib/api";
-import type { CreditTx, Item, Swap, SwapLists } from "@/lib/types";
+import { apiDelete, apiGet, apiPost } from "@/lib/api";
+import type { CreditTx, Item, SavedSearch, Swap, SwapLists } from "@/lib/types";
+import SwapProgress from "@/components/SwapProgress";
 import { errorMessage, useMe } from "@/lib/hooks";
 import ItemCard from "@/components/ItemCard";
 import { cn } from "@/lib/utils";
@@ -17,7 +18,7 @@ const STATUS_STYLE: Record<Swap["status"], string> = {
   cancelled: "bg-slate-100 text-slate-600",
 };
 
-function SwapRow({ swap, incoming }: { swap: Swap; incoming: boolean }) {
+function SwapRow({ swap, incoming, viewerId }: { swap: Swap; incoming: boolean; viewerId: string | undefined }) {
   const qc = useQueryClient();
   const act = useMutation({
     mutationFn: (action: "accept" | "decline" | "cancel") => apiPost<Swap>(`/swaps/${swap.id}/${action}`),
@@ -37,7 +38,8 @@ function SwapRow({ swap, incoming }: { swap: Swap; incoming: boolean }) {
   const other = incoming ? swap.proposer_name : swap.owner_name;
 
   return (
-    <div data-testid={`swap-row-${swap.id}`} className="brutal flex flex-col gap-4 rounded-2xl bg-white p-4 sm:flex-row sm:items-center">
+    <div data-testid={`swap-row-${swap.id}`} className="brutal rounded-2xl bg-white p-4">
+     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
       <div className="flex flex-1 items-center gap-3">
         <img src={give.image_url} alt="" className="size-16 rounded-xl border-2 border-slate-900 object-cover" />
         <ArrowLeftRight className="size-5 shrink-0 text-emerald-700" />
@@ -85,6 +87,61 @@ function SwapRow({ swap, incoming }: { swap: Swap; incoming: boolean }) {
           </a>
         )}
       </div>
+     </div>
+      {swap.status === "accepted" && (
+        <div className="mt-4">
+          <SwapProgress swap={swap} viewerId={viewerId} compact />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function searchHref(s: Pick<SavedSearch, "q" | "category" | "location">) {
+  const sp = new URLSearchParams();
+  if (s.q) sp.set("q", s.q);
+  if (s.category) sp.set("category", s.category);
+  if (s.location) sp.set("location", s.location);
+  return `/browse?${sp.toString()}`;
+}
+
+function SavedSearches() {
+  const qc = useQueryClient();
+  const { data, isError } = useQuery({ queryKey: ["saved-searches"], queryFn: () => apiGet<SavedSearch[]>("/saved-searches") });
+  const del = useMutation({
+    mutationFn: (id: string) => apiDelete(`/saved-searches/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["saved-searches"] });
+      toast.success("Saved search removed");
+    },
+    onError: (e) => toast.error(errorMessage(e)),
+  });
+  const list = isError ? [] : (data ?? []);
+  if (list.length === 0)
+    return <Empty testid="saved-empty" text='No saved searches yet. Search for something like "camera" in Dublin on Browse and tap "Save search" to get alerts.' />;
+  return (
+    <div className="space-y-3">
+      {list.map((s) => (
+        <div key={s.id} data-testid={`saved-search-${s.id}`} className="brutal flex flex-wrap items-center gap-3 rounded-2xl bg-white p-4">
+          <span className="grid size-10 place-items-center rounded-full border-2 border-slate-900 bg-pink-200">
+            <Bell className="size-4" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-bold">
+              {s.q ? `"${s.q}"` : "Anything"}
+              {s.category && <span className="font-normal text-slate-600"> in {s.category}</span>}
+              {s.location && <span className="font-normal text-slate-600"> near {s.location}</span>}
+            </p>
+            <p className="text-xs text-slate-500">You'll get an alert when a matching item is listed</p>
+          </div>
+          <Link to={searchHref(s)} data-testid={`saved-search-view-${s.id}`} className="inline-flex items-center gap-1 rounded-full border-2 border-slate-900 px-3 py-1.5 text-xs font-bold hover:bg-slate-50">
+            <Search className="size-3.5" /> View matches
+          </Link>
+          <Button size="icon-sm" variant="ghost" aria-label="Delete saved search" data-testid={`saved-search-delete-${s.id}`} disabled={del.isPending} onClick={() => del.mutate(s.id)}>
+            <Trash2 className="size-4" />
+          </Button>
+        </div>
+      ))}
     </div>
   );
 }
@@ -147,16 +204,19 @@ export default function Dashboard() {
           <TabsTrigger value="listings" data-testid="tab-listings" className="rounded-full px-4 py-1.5 data-active:bg-slate-900 data-active:text-white">
             My listings
           </TabsTrigger>
+          <TabsTrigger value="saved" data-testid="tab-saved" className="rounded-full px-4 py-1.5 data-active:bg-slate-900 data-active:text-white">
+            Saved searches
+          </TabsTrigger>
           <TabsTrigger value="history" data-testid="tab-history" className="rounded-full px-4 py-1.5 data-active:bg-slate-900 data-active:text-white">
             Credit history
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="incoming" className="mt-6 space-y-4">
-          {incoming.length === 0 ? <Empty testid="incoming-empty" text="No offers yet — list more items to get noticed!" /> : incoming.map((s) => <SwapRow key={s.id} swap={s} incoming />)}
+          {incoming.length === 0 ? <Empty testid="incoming-empty" text="No offers yet — list more items to get noticed!" /> : incoming.map((s) => <SwapRow key={s.id} swap={s} incoming viewerId={me?.user_id} />)}
         </TabsContent>
         <TabsContent value="outgoing" className="mt-6 space-y-4">
-          {outgoing.length === 0 ? <Empty testid="outgoing-empty" text="You haven't proposed any swaps yet. Go browse!" /> : outgoing.map((s) => <SwapRow key={s.id} swap={s} incoming={false} />)}
+          {outgoing.length === 0 ? <Empty testid="outgoing-empty" text="You haven't proposed any swaps yet. Go browse!" /> : outgoing.map((s) => <SwapRow key={s.id} swap={s} incoming={false} viewerId={me?.user_id} />)}
         </TabsContent>
         <TabsContent value="listings" className="mt-6">
           {(mine.data ?? []).length === 0 || mine.isError ? (
@@ -173,6 +233,9 @@ export default function Dashboard() {
               ))}
             </div>
           )}
+        </TabsContent>
+        <TabsContent value="saved" className="mt-6">
+          <SavedSearches />
         </TabsContent>
         <TabsContent value="history" className="mt-6">
           {(history.data ?? []).length === 0 || history.isError ? (

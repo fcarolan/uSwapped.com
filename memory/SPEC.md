@@ -51,3 +51,15 @@ manifest.webmanifest + sw.js (offline fallback only, never caches /api) + icons 
 
 ## Facebook login
 Code is ready but DISABLED until FACEBOOK_APP_ID and FACEBOOK_APP_SECRET are set in backend/.env (then restart backend). Redirect URI to register in Meta: https://<public-host>/api/auth/facebook/callback (override with FACEBOOK_REDIRECT_URI). Login button reads /auth/providers.
+
+## Postage tracking, ratings, trusted swappers
+- Accepted swaps carry proposer_/owner_ posted_at, tracking, received_at, rated. "proposer_received_at" = proposer received the owner's item.
+- POST /swaps/{id}/posted {tracking?} (re-call edits tracking), POST /swaps/{id}/received, POST /swaps/{id}/rating {stars 1-5, comment} (only after *you* marked received, once per side). Each notifies the other party (swap_posted / swap_received / rating).
+- Ratings stored in `ratings`; users keep rating_sum/rating_count. Items are enriched with owner_rating_avg/owner_rating_count at read time.
+- Trusted swapper = ≥3 ratings and avg ≥4.5 (backend lib/search.py is_trusted, mirrored in components/Trust.tsx). Seed: Aoife 4.8 (4) trusted, Sophie 5.0 (3) trusted, Luca 4.5 (2) not trusted.
+- Public profile: GET /users/{user_id} → page /users/:id (rating, reviews, listings, swaps received). Linked from item detail owner card.
+- SwapProgress tracker shows on accepted swaps in Dashboard and Chat.
+
+## Saved searches
+- GET/POST/DELETE /saved-searches {q, category?, location} (max 10/user, no duplicates, at least one field). Browse has a location box + "Save search & get alerts"; Dashboard "Saved searches" tab.
+- Search matching (Browse + alerts) is word-based and plural-tolerant ("cameras" matches "Camera"); location is a case-insensitive contains. New listings trigger a `saved_search` notification (+ push) to each other user with a matching search.

@@ -9,6 +9,7 @@ import { apiGet, apiPost } from "@/lib/api";
 import type { Message, MessageCreate, Swap } from "@/lib/types";
 import { errorMessage, useMe } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
+import SwapProgress from "@/components/SwapProgress";
 
 const QUICK = ["Hi! When can you post yours?", "I'll post mine tomorrow 📦", "Here's my tracking number:", "Received it, thanks! 🎉"];
 
@@ -82,6 +83,12 @@ export default function Chat() {
           </div>
         )}
       </div>
+
+      {open && swap && (
+        <div className="mt-3">
+          <SwapProgress swap={swap} viewerId={me?.user_id} compact />
+        </div>
+      )}
 
       <div className="mt-3 flex items-start gap-2 rounded-xl bg-sky-100 px-3 py-2 text-xs text-slate-700">
         <Truck className="mt-0.5 size-4 shrink-0" /> Each of you posts your own item at your own cost. Share addresses and tracking here.

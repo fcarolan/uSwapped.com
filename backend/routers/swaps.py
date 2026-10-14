@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from lib.auth import get_current_user, now_iso
 from lib.db import db
 from lib.notify import notify
-from models.schemas import ItemSummary, Message, MessageCreate, Swap, SwapCreate, SwapLists
+from models.schemas import ItemSummary, Message, MessageCreate, PostedUpdate, Rating, RatingCreate, Swap, SwapCreate, SwapLists
 from typing import List
 
 router = APIRouter(prefix="/swaps")
@@ -176,3 +176,67 @@ async def send_message(id: str, body: MessageCreate, user: dict = Depends(get_cu
     other = doc["owner_id"] if user["user_id"] == doc["proposer_id"] else doc["proposer_id"]
     await notify(other, "message", f"Message from {user['name'].split(' ')[0]}", text[:120], f"/swaps/{id}/chat")
     return msg
+
+
+async def _accepted_party(id: str, user: dict) -> tuple[dict, str, str]:
+    """Returns (swap, my_role, other_user_id) for an accepted swap the user is part of."""
+    doc = await _party_swap(id, user)
+    if doc["status"] != "accepted":
+        raise HTTPException(status_code=400, detail="Postage tracking starts once the swap is accepted")
+    role = "proposer" if user["user_id"] == doc["proposer_id"] else "owner"
+    other = doc["owner_id"] if role == "proposer" else doc["proposer_id"]
+    return doc, role, other
+
+
+def _my_item(doc: dict, role: str) -> dict:
+    return doc["offered_item"] if role == "proposer" else doc["target_item"]
+
+
+def _their_item(doc: dict, role: str) -> dict:
+    return doc["target_item"] if role == "proposer" else doc["offered_item"]
+
+
+@router.post("/{id}/posted", response_model=Swap)
+async def mark_posted(id: str, body: PostedUpdate, user: dict = Depends(get_current_user)):
+    doc, role, other = await _accepted_party(id, user)
+    tracking = body.tracking.strip() or None
+    if doc.get(f"{role}_posted_at"):
+        await db.swaps.update_one({"id": id}, {"$set": {f"{role}_tracking": tracking}})  # allow tracking edits
+    else:
+        await db.swaps.update_one({"id": id}, {"$set": {f"{role}_posted_at": now_iso(), f"{role}_tracking": tracking}})
+        first = user["name"].split(" ")[0]
+        extra = f" Tracking: {tracking}" if tracking else ""
+        await notify(other, "swap_posted", f"{first} posted your item 📦",
+                     f"{_my_item(doc, role)['title']} is on its way.{extra}", f"/swaps/{id}/chat")
+    return await _to_swap(await db.swaps.find_one({"id": id}, {"_id": 0}), user["user_id"])
+
+
+@router.post("/{id}/received", response_model=Swap)
+async def mark_received(id: str, user: dict = Depends(get_current_user)):
+    doc, role, other = await _accepted_party(id, user)
+    if not doc.get(f"{role}_received_at"):
+        await db.swaps.update_one({"id": id}, {"$set": {f"{role}_received_at": now_iso()}})
+        first = user["name"].split(" ")[0]
+        await notify(other, "swap_received", f"{first} received your item ✅",
+                     f"{_their_item(doc, role)['title']} arrived safely.", f"/swaps/{id}/chat")
+    return await _to_swap(await db.swaps.find_one({"id": id}, {"_id": 0}), user["user_id"])
+
+
+@router.post("/{id}/rating", response_model=Rating)
+async def rate(id: str, body: RatingCreate, user: dict = Depends(get_current_user)):
+    doc, role, other = await _accepted_party(id, user)
+    if not doc.get(f"{role}_received_at"):
+        raise HTTPException(status_code=400, detail="Mark your item as received before rating")
+    locked = await db.swaps.update_one({"id": id, f"{role}_rated": {"$ne": True}}, {"$set": {f"{role}_rated": True}})
+    if locked.modified_count != 1:
+        raise HTTPException(status_code=400, detail="You already rated this swap")
+    rating = Rating(
+        id=str(uuid.uuid4()), swap_id=id, rater_id=user["user_id"], rater_name=user["name"],
+        rater_picture=user.get("picture"), ratee_id=other, stars=body.stars, comment=body.comment.strip(),
+        item_title=_their_item(doc, role)["title"], created_at=now_iso(),
+    )
+    await db.ratings.insert_one(rating.model_dump())
+    await db.users.update_one({"user_id": other}, {"$inc": {"rating_sum": body.stars, "rating_count": 1}})
+    await notify(other, "rating", f"You got {'⭐' * body.stars} from {user['name'].split(' ')[0]}",
+                 rating.comment[:120] or "Thanks for a great swap!", f"/users/{other}")
+    return rating

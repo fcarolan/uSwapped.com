@@ -12,6 +12,7 @@ import { errorMessage, startGoogleLogin, useMe } from "@/lib/hooks";
 import { CreditBadge } from "@/components/ItemCard";
 import { eur } from "@/lib/credits";
 import { cn } from "@/lib/utils";
+import { RatingInline, TrustBadge, isTrusted } from "@/components/Trust";
 
 function ProposeDialog({ target, myCredits }: { target: Item; myCredits: number }) {
   const qc = useQueryClient();
@@ -222,15 +223,24 @@ export default function ItemDetail() {
 
             <p className="whitespace-pre-line leading-relaxed text-slate-700" data-testid="item-description">{item.description}</p>
 
-            <div className="flex items-center gap-3 rounded-2xl border-2 border-slate-200 bg-white p-4">
+            <Link
+              to={`/users/${item.owner_id}`}
+              data-testid="item-owner-link"
+              className="group flex items-center gap-3 rounded-2xl border-2 border-slate-200 bg-white p-4 transition-colors duration-150 hover:border-slate-900"
+            >
               <div className="grid size-11 place-items-center overflow-hidden rounded-full border-2 border-slate-900 bg-emerald-100">
                 {item.owner_picture ? <img src={item.owner_picture} alt="" className="size-full object-cover" /> : item.owner_name[0]}
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-xs text-slate-500">Listed by</p>
-                <p className="font-semibold" data-testid="item-owner-name">{item.owner_name}</p>
+                <p className="flex flex-wrap items-center gap-2 font-semibold" data-testid="item-owner-name">
+                  {item.owner_name}
+                  {isTrusted(item.owner_rating_avg, item.owner_rating_count) && <TrustBadge testid="item-owner-trusted" />}
+                </p>
+                <RatingInline avg={item.owner_rating_avg} count={item.owner_rating_count} testid="item-owner-rating" />
               </div>
-            </div>
+              <span className="text-xs font-bold text-emerald-700 group-hover:underline">View profile →</span>
+            </Link>
 
             {item.status === "available" &&
               (!me ? (

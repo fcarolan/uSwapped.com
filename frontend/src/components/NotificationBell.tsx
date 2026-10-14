@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeftRight, Bell, BellRing, Check, MessageCircle, X } from "lucide-react";
+import { ArrowLeftRight, Bell, BellRing, Check, MessageCircle, PackageCheck, Search, Star, Truck, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { apiGet, apiPost } from "@/lib/api";
 import type { Notification, NotificationKind, NotificationList } from "@/lib/types";
@@ -14,12 +14,20 @@ const ICONS: Record<NotificationKind, typeof Bell> = {
   swap_accepted: Check,
   swap_declined: X,
   message: MessageCircle,
+  swap_posted: Truck,
+  swap_received: PackageCheck,
+  rating: Star,
+  saved_search: Search,
 };
 const ICON_BG: Record<NotificationKind, string> = {
   swap_offer: "bg-amber-200",
   swap_accepted: "bg-emerald-200",
   swap_declined: "bg-slate-200",
   message: "bg-sky-200",
+  swap_posted: "bg-sky-200",
+  swap_received: "bg-emerald-200",
+  rating: "bg-amber-200",
+  saved_search: "bg-pink-200",
 };
 
 function timeAgo(iso: string): string {

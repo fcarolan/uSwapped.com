@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Coins, MapPin } from "lucide-react";
 import type { Item } from "@/lib/types";
 import { eur } from "@/lib/credits";
+import { RatingInline, TrustBadge, isTrusted } from "@/components/Trust";
 
 export function CreditBadge({ credits, testid }: { credits: number; testid?: string }) {
   return (
@@ -35,6 +36,9 @@ export default function ItemCard({ item, index = 0 }: { item: Item; index?: numb
         <span className="absolute right-3 top-3 rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-bold text-slate-800 backdrop-blur">
           {item.condition}
         </span>
+        {isTrusted(item.owner_rating_avg, item.owner_rating_count) && (
+          <TrustBadge className="absolute bottom-3 left-3" testid={`item-card-trusted-${item.id}`} />
+        )}
       </div>
       <div className="space-y-1.5 p-4">
         <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-700">{item.category}</p>
@@ -46,6 +50,10 @@ export default function ItemCard({ item, index = 0 }: { item: Item; index?: numb
           <span className="inline-flex items-center gap-1 text-xs">
             <MapPin className="size-3.5" /> {item.location}
           </span>
+        </div>
+        <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-xs text-slate-500">
+          <span className="truncate">{item.owner_name}</span>
+          <RatingInline avg={item.owner_rating_avg} count={item.owner_rating_count} testid={`item-card-rating-${item.id}`} />
         </div>
       </div>
     </Link>

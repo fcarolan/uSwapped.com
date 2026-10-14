@@ -52,6 +52,8 @@ class Item(ItemBase):
     credit_cost: int
     status: ItemStatus = "available"
     created_at: str
+    owner_rating_avg: Optional[float] = None  # filled at read time from the owner's ratings
+    owner_rating_count: int = 0
 
 
 class ItemSummary(BaseModel):
@@ -72,7 +74,10 @@ class AuthProviders(BaseModel):
     facebook: bool
 
 
-NotificationKind = Literal["swap_offer", "swap_accepted", "swap_declined", "message"]
+NotificationKind = Literal[
+    "swap_offer", "swap_accepted", "swap_declined", "message",
+    "swap_posted", "swap_received", "rating", "saved_search",
+]
 
 
 class Notification(BaseModel):
@@ -142,6 +147,62 @@ class Swap(BaseModel):
     status: SwapStatus = "pending"
     created_at: str
     counterpart_email: Optional[str] = None  # revealed only once accepted, to arrange postage
+    # postage tracking (accepted swaps). "proposer_received_at" = proposer got the owner's item.
+    proposer_posted_at: Optional[str] = None
+    proposer_tracking: Optional[str] = None
+    owner_posted_at: Optional[str] = None
+    owner_tracking: Optional[str] = None
+    proposer_received_at: Optional[str] = None
+    owner_received_at: Optional[str] = None
+    proposer_rated: bool = False
+    owner_rated: bool = False
+
+
+class PostedUpdate(BaseModel):
+    tracking: str = Field(default="", max_length=80)
+
+
+class RatingCreate(BaseModel):
+    stars: int = Field(ge=1, le=5)
+    comment: str = Field(default="", max_length=300)
+
+
+class Rating(BaseModel):
+    id: str
+    swap_id: str
+    rater_id: str
+    rater_name: str
+    rater_picture: Optional[str] = None
+    ratee_id: str
+    stars: int
+    comment: str = ""
+    item_title: str
+    created_at: str
+
+
+class UserProfile(BaseModel):
+    user_id: str
+    name: str
+    picture: Optional[str] = None
+    member_since: str
+    rating_avg: Optional[float] = None
+    rating_count: int = 0
+    trusted: bool = False
+    swaps_completed: int = 0
+    ratings: List[Rating]
+    items: List[Item]
+
+
+class SavedSearchCreate(BaseModel):
+    q: str = Field(default="", max_length=60)
+    category: Optional[Category] = None
+    location: str = Field(default="", max_length=60)
+
+
+class SavedSearch(SavedSearchCreate):
+    id: str
+    user_id: str
+    created_at: str
 
 
 class SwapLists(BaseModel):
