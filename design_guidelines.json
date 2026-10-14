@@ -1,0 +1,190 @@
+{
+  "project_name": "USwapped.com",
+  "archetype": "Pastel & Soft with Neo-Brutalist Pop (Fun, energetic, approachable, high-trust peer-to-peer swapping)",
+  "locale": {
+    "country": "IE",
+    "currency_symbol": "€",
+    "currency_code": "EUR",
+    "date_format": "dd/MM/yyyy"
+  },
+  "typography": {
+    "font_family_heading": "Outfit, sans-serif",
+    "font_family_body": "Plus Jakarta Sans, sans-serif",
+    "font_family_mono": "Geist Mono, monospace",
+    "import_statements": [
+      "@import \"@fontsource-variable/outfit\";",
+      "@import \"@fontsource-variable/plus-jakarta-sans\";",
+      "@import \"@fontsource-variable/geist-mono\";"
+    ],
+    "scale_px": {
+      "display": 56,
+      "h1": 44,
+      "h2": 32,
+      "h3": 22,
+      "body": 16,
+      "caption": 14
+    },
+    "rules": {
+      "headings": "font-heading font-extrabold tracking-tight text-slate-900 dark:text-slate-50",
+      "body": "font-sans font-normal leading-relaxed text-slate-700 dark:text-slate-300",
+      "labels": "font-heading uppercase tracking-[0.18em] text-xs font-bold"
+    }
+  },
+  "colors": {
+    "surfaces": [
+      {
+        "name": "page",
+        "kind": "solid",
+        "bg": "#FAFAF7",
+        "on_bg": "#111827",
+        "on_bg_muted": "#4B5563",
+        "roles": {
+          "link": "#047857",
+          "error": "#B91C1C",
+          "success": "#047857"
+        }
+      },
+      {
+        "name": "panel",
+        "kind": "solid",
+        "bg": "#FFFFFF",
+        "on_bg": "#111827",
+        "on_bg_muted": "#4B5563",
+        "roles": {
+          "border": "#E5E7EB",
+          "badge_bg": "#FEF3C7",
+          "badge_text": "#92400E"
+        }
+      },
+      {
+        "name": "card_mint",
+        "kind": "solid",
+        "bg": "#ECFDF5",
+        "on_bg": "#064E3B",
+        "on_bg_muted": "#047857"
+      },
+      {
+        "name": "card_amber",
+        "kind": "solid",
+        "bg": "#FFFBEB",
+        "on_bg": "#78350F",
+        "on_bg_muted": "#92400E"
+      },
+      {
+        "name": "card_violet",
+        "kind": "solid",
+        "bg": "#F5F3FF",
+        "on_bg": "#4C1D95",
+        "on_bg_muted": "#6D28D9"
+      },
+      {
+        "name": "inverse",
+        "kind": "solid",
+        "bg": "#0F172A",
+        "on_bg": "#F8FAFC",
+        "on_bg_muted": "#94A3B8"
+      },
+      {
+        "name": "hero",
+        "kind": "gradient",
+        "contrast_against": "#FFFFFF",
+        "guarantee": "scrim: radial-gradient(circle at 10% 20%, #F0FDF4 0%, #FFFBEB 50%, #FAF5FF 100%)",
+        "on_bg": "#0F172A",
+        "on_bg_muted": "#334155"
+      }
+    ],
+    "accent": "#059669",
+    "on_accent": "#FFFFFF",
+    "accent_secondary": "#D97706",
+    "on_accent_secondary": "#FFFFFF",
+    "accent_fun": "#7C3AED",
+    "on_accent_fun": "#FFFFFF"
+  },
+  "entry_surfaces": {
+    "/": "editorial split hero — bold tag + value proposition + interactive credit calculator left, visual seeded item swap duel right",
+    "/browse": "dense marketplace bento — search bar + category pill filters top, sticky credit estimator sidebar, item card grid",
+    "/items/:id": "product immersion split — high-res gallery + swapper badge left, credit formula breakdown + 'Propose Swap' selector drawer right",
+    "/create-listing": "focused wizard panel — 2-column live value-to-credit estimator with visual tier badge and shipping disclaimer",
+    "/dashboard": "compact command center — credit wallet status banner + pending proposals tabbed matrix + my active swap garage",
+    "/credits": "playful 4-tier pricing grid with highlighted 'Popular 50 Credits' card, Stripe checkout trigger, and refund policy badge",
+    "/payment-success": "celebration card modal with animated credit counter and quick CTA to browse items"
+  },
+  "business_logic_rules": {
+    "credit_calculation_formula": {
+      "under_10_eur": 1,
+      "between_10_and_49_eur": 2,
+      "between_50_and_99_eur": 4,
+      "between_100_and_249_eur": 8,
+      "over_250_eur": "Math.min(50, Math.max(10, Math.round(value * 0.04)))",
+      "rule_description": "Each party pays the item's credit cost upon swap acceptance. Both swappers pay their own packaging and postage."
+    },
+    "credit_packs": [
+      {"credits": 10, "price_eur": 1.99, "badge": "Starter", "desc": "Great for books, vinyl & clothing swaps"},
+      {"credits": 20, "price_eur": 3.99, "badge": "Popular", "desc": "Swap gadgets, cameras and designer sneakers"},
+      {"credits": 50, "price_eur": 6.99, "badge": "Best Value", "desc": "For avid collectors and frequent swappers"},
+      {"credits": 100, "price_eur": 9.99, "badge": "Pro Swapper", "desc": "Maximum savings for heavy electronics & luxury"}
+    ],
+    "free_signup_credits": 3,
+    "shipping_rule": "The sender arranges postage and packaging at their own expense."
+  },
+  "image_urls": {
+    "hero_vintage_camera": {
+      "url": "https://images.unsplash.com/26/camera-keys.jpg?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzZ8MHwxfHNlYXJjaHwxfHx2aW50YWdlJTIwY2FtZXJhJTIwc25lYWtlcnMlMjBtZWNoYW5pY2FsJTIwa2V5Ym9hcmR8ZW58MHx8fHwxNzkxOTcwNjE1fDA&ixlib=rb-4.1.0&q=85",
+      "category": "hero_sample",
+      "description": "Vintage point and shoot rangefinder camera"
+    },
+    "typewriter_retro": {
+      "url": "https://images.unsplash.com/photo-1708102399096-b01391f99fbb?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzZ8MHwxfHNlYXJjaHw0fHx2aW50YWdlJTIwY2FtZXJhJTIwc25lYWtlcnMlMjBtZWNoYW5pY2FsJTIwa2V5Ym9hcmR8ZW58MHx8fHwxNzkxOTcwNjE1fDA&ixlib=rb-4.1.0&q=85",
+      "category": "listing_sample",
+      "description": "Mint green retro typewriter with film roll"
+    },
+    "sneakers_camera_gear": {
+      "url": "https://images.unsplash.com/photo-1576788448817-9b4ddb64e4fa?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzZ8MHwxfHNlYXJjaHwzfHx2aW50YWdlJTIwY2FtZXJhJTIwc25lYWtlcnMlMjBtZWNoYW5pY2FsJTIwa2V5Ym9hcmR8ZW58MHx8fHwxNzkxOTcwNjE1fDA&ixlib=rb-4.1.0&q=85",
+      "category": "listing_sample",
+      "description": "Streetwear sneakers and camera gear"
+    },
+    "vintage_clothing_rack": {
+      "url": "https://images.unsplash.com/photo-1768145488790-185e20abfd08?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTV8MHwxfHNlYXJjaHwyfHxzZWNvbmRoYW5kJTIwdmludGFnZSUyMGNsb3RoaW5nJTIwdmlueWwlMjByZWNvcmRzfGVufDB8fHx8MTc5MTk3MDYxNXww&ixlib=rb-4.1.0&q=85",
+      "category": "category_preview",
+      "description": "Racks of curated colorful vintage apparel"
+    },
+    "vintage_storefront": {
+      "url": "https://images.unsplash.com/photo-1777869356086-b0351f541ae7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTV8MHwxfHNlYXJjaHwxfHxzZWNvbmRoYW5kJTIwdmludGFnZSUyMGNsb3RoaW5nJTIwdmlueWwlMjByZWNvcmRzfGVufDB8fHx8MTc5MTk3MDYxNXww&ixlib=rb-4.1.0&q=85",
+      "category": "community_store",
+      "description": "Vintage emporium artistic storefront"
+    },
+    "happy_swappers_community": {
+      "url": "https://images.unsplash.com/photo-1758525223624-2b08b9e97e3e?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODF8MHwxfHNlYXJjaHwyfHxoYXBweSUyMHBlb3BsZSUyMGV4Y2hhbmdlJTIwZ29vZHMlMjBtYXJrZXR8ZW58MHx8fHwxNzkxOTcwNjE1fDA&ixlib=rb-4.1.0&q=85",
+      "category": "social_proof",
+      "description": "Two happy people swapping unboxed items"
+    }
+  },
+  "layout_and_components": {
+    "header": {
+      "style": "Glassmorphism with solid border-b (bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50)",
+      "elements": [
+        "Brand Logo (USwapped badge with swap icon)",
+        "Nav Links: Browse Items, How It Works, Pricing/Credits, FAQ",
+        "Credit Wallet Pill: Shows live balance (e.g. 🪙 3 Credits) with '+ Buy' button",
+        "Primary Action: '+ List Item' button",
+        "User Menu / Auth Modal button"
+      ]
+    },
+    "item_card": {
+      "style": "Rounded-2xl border-2 border-slate-900 bg-white shadow-[4px_4px_0px_#0F172A] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#0F172A] transition-all duration-200",
+      "badges": ["Estimated Value €XX", "🪙 X Credits Required", "Condition Pill", "Location"]
+    },
+    "swap_proposal_modal": {
+      "interaction": "Pick one of your existing items or create one quickly, calculate mutual credit requirement, highlight postage agreement notice, confirm proposal"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Template is farm-ts (FastAPI backend + Vite/React frontend with Tailwind v4).",
+    "Implement the live interactive Swap Credit Calculator directly on the landing page hero and create listing pages.",
+    "Implement the 4 Credit Packs (€1.99, €3.99, €6.99, €9.99) with Stripe checkout flow and simulated instant checkout for seamless testing.",
+    "Implement realistic seeded listings (vintage cameras, audio gear, retro games, designer apparel, instruments) with genuine images from the provided image URLs.",
+    "Ensure every interactive element has kebab-case data-testid attributes (e.g. data-testid='buy-credits-pack-20', data-testid='propose-swap-button').",
+    "Include mock Google OAuth sign in and a 'Facebook sign-in (coming soon)' button.",
+    "Highlight clearly: 'Postage & Packaging is paid by each sender directly when swapping'."
+  ]
+}
